@@ -1,4 +1,4 @@
-    #TODO: Apply batch gradient descent
+#TODO: Apply batch gradient descent
 
 import os
 import re
