@@ -191,22 +191,18 @@ class ImageDataset:
     def get_list(self):
         return self.results
 
-class Bottlenecks:
-    def __init__(self, sess, image_data, bdir, architecture, jpeg_data_tensor, decoded_image_tensor, resized_input_tensor, bottleneck_tensor):
+class Bottlenecks_Manager:
+    def __init__(self, sess, image_data, bdir, architecture, bottleneck_tensor):
         self.sess = sess
         self.image_dataset = image_data
         self.bdir = bdir
         self.architecture = architecture
-        self.jpeg_data_tensor = jpeg_data_tensor
-        self.decoded_image_tensor = decoded_image_tensor
-        self.resized_input_tensor = resized_input_tensor
         self.bottleneck_tensor = bottleneck_tensor
 
         self.cache()
 
     def run_on_image(self, image_data):
-        resized_input_values = self.sess.run(self.decoded_image_tensor, feed_dict={self.jpeg_data_tensor:image_data})
-        value = self.sess.run(self.bottleneck_tensor, feed_dict={self.resized_input_tensor:resized_input_values})
+        value = self.sess.run(self.bottleneck_tensor, feed_dict={self.resized_input_tensor:image_data})
         return np.squeeze(value)
 
     def create_file(self, path, index, category):
