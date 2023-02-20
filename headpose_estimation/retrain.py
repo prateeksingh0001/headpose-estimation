@@ -1,5 +1,3 @@
-#TODO: Apply batch gradient descent
-
 import os
 import re
 import csv
@@ -17,10 +15,8 @@ from tensorflow.python.util import compat
 from tensorflow.python.platform import gfile
 from tensorflow.python.framework import graph_util
 from tensorflow.contrib.metrics import streaming_pearson_correlation
-from pycallgraph import PyCallGraph
-from pycallgraph.output import GraphvizOutput
 
-VAL = 2**27 + 1
+VAL = 2 ** 27 + 1
 CHECKPOINT_NAME = '/tmp/_retrain_checkpoint'
 
 
@@ -113,6 +109,7 @@ def parse_arguments():
     flags, unparsed_args = parser.parse_known_args()
     return flags, unparsed_args
 
+
 class ImageDataset:
     def __init__(self, flags):
         self.image_dir = flags.image_dir
@@ -121,7 +118,6 @@ class ImageDataset:
         self.gt_file = flags.labels_file
         self.results = {}
         self.create_img_list()
-
 
     def create_img_list(self):
         if not gfile.Exists(self.image_dir):
@@ -132,18 +128,18 @@ class ImageDataset:
         file_list = []
         labels = []
 
-        #TODO: convert to list comprehension
+        # TODO: convert to list comprehension
         for extension in extensions:
             file_list.extend(gfile.Glob(os.path.join(self.image_dir, '*.' + extension)))
 
         if not file_list:
-            tf.logging.warning('No files found') #TODO: check if it returns too
+            tf.logging.warning('No files found')  # TODO: check if it returns too
             return
 
         with open(self.gt_file, 'r') as csvfile:
             label_file = csv.reader(csvfile, delimiter='\t')
             for row in label_file:
-                labels.append([float(values) for values in row]) #TODO: convert to list comprehension
+                labels.append([float(values) for values in row])  # TODO: convert to list comprehension
 
         training_images = []
         testing_images = []
@@ -153,7 +149,7 @@ class ImageDataset:
             hash_name = re.sub(r'_nohash_.*$', '', file_name)
 
             hash_name_hashed = hashlib.sha1(compat.as_bytes(hash_name)).hexdigest()
-            percentage_hash = ((int(hash_name_hashed, 16)%(VAL))*(100.0 / VAL))
+            percentage_hash = ((int(hash_name_hashed, 16) % (VAL)) * (100.0 / VAL))
             if percentage_hash < self.valid_percent:
                 validation_images.append(base_name)
             elif percentage_hash < (self.test_percent + self.valid_percent):
@@ -165,11 +161,11 @@ class ImageDataset:
         print('No. of validation images : ', len(validation_images))
         print('No. of testing images : ', len(testing_images))
 
-        self.results = { #TODO: find a better name
-            'validation':validation_images,
-            'training':training_images,
-            'testing':testing_images,
-            'labels':labels
+        self.results = {  # TODO: find a better name
+            'validation': validation_images,
+            'training': training_images,
+            'testing': testing_images,
+            'labels': labels
         }
 
     def get_path(self, index, category):
@@ -191,7 +187,8 @@ class ImageDataset:
     def get_list(self):
         return self.results
 
-class Bottlenecks_Manager:
+
+class Bottlenecks:
     def __init__(self, sess, image_data, bdir, architecture, bottleneck_tensor):
         self.sess = sess
         self.image_dataset = image_data
@@ -202,7 +199,7 @@ class Bottlenecks_Manager:
         self.cache()
 
     def run_on_image(self, image_data):
-        value = self.sess.run(self.bottleneck_tensor, feed_dict={self.resized_input_tensor:image_data})
+        value = self.sess.run(self.bottleneck_tensor, feed_dict={self.resized_input_tensor: image_data})
         return np.squeeze(value)
 
     def create_file(self, path, index, category):
@@ -214,7 +211,7 @@ class Bottlenecks_Manager:
         try:
             value = self.run_on_image(image_data)
         except Exception as exep:
-            raise RuntimeError('Error during processing file %s (%s)'%(image_path, str(exep)))
+            raise RuntimeError('Error during processing file %s (%s)' % (image_path, str(exep)))
 
         bstring = ','.join(str(x) for x in value)
         with open(path, 'w') as bfile:
@@ -282,6 +279,7 @@ class Bottlenecks_Manager:
                 ground_truth.append(self.image_dataset.get_ground_truth(image_index, category))
         return bottlenecks, np.array(ground_truth)
 
+
 class Model:
     def __init__(self, flags):
         self.flags = flags
@@ -299,10 +297,10 @@ class Model:
         self.create_model_info()
 
         if not self.model_info:
-            #tf.logging.error('Did not recognize the architecture flag')
+            # tf.logging.error('Did not recognize the architecture flag')
             raise RuntimeError('Did not recognize the architecture flag')
 
-            #return -1 ## Add a value error over here
+            # return -1 ## Add a value error over here
 
         self.filename = self.model_info['data_url'].split('/')[-1]
         self.filepath = os.path.join(self.flags.model_dir, self.filename)
@@ -317,9 +315,11 @@ class Model:
 
     def download(self):
         def _progress(count, block_size, total_size):
-            sys.stdout.write('\r>> Downloading %s %.1f%%' %(self.filename, float(count * block_size)/float(total_size) * 100.0))
+            sys.stdout.write(
+                '\r>> Downloading %s %.1f%%' % (self.filename, float(count * block_size) / float(total_size) * 100.0))
             sys.stdout.flush()
-            filepath, _ = urllib.request.urlretrieve(self.model_info['data_url'], self.filepath, _progress) #### filepath clobbered !!!
+            filepath, _ = urllib.request.urlretrieve(self.model_info['data_url'], self.filepath,
+                                                     _progress)  #### filepath clobbered !!!
             statinfo = os.stat(filepath)
             tf.logging.info('Successfully downloaded %s %d bytes.', self.filename, statinfo.st_size)
 
@@ -362,7 +362,7 @@ class Model:
                 tf.logging.error(
                     """The Mobilenet version should be '1.0', '0.75', '0.5', or '0.25', but found '%s' for architecture '%s'""",
                     version_string, architecture
-                    )
+                )
                 return
 
             size_string = parts[2]
@@ -455,13 +455,14 @@ class Model:
         resize_shape_as_int = tf.cast(resize_shape, dtype=tf.int32)
         resized_image = tf.image.resize_bilinear(decoded_image_4d, resize_shape_as_int)
         offset_image = tf.subtract(resized_image, self.model_info['input_mean'])
-        mul_image = tf.multiply(offset_image, 1.0/self.model_info['input_std'])
+        mul_image = tf.multiply(offset_image, 1.0 / self.model_info['input_std'])
         return jpeg_data, mul_image
 
     def add_final_retrain_ops(self, is_training=True):
         bottleneck_tensor_size = self.model_info['bottleneck_tensor_size']
         with tf.name_scope('input'):
-            bottleneck_input = tf.placeholder_with_default(self.bottleneck_tensor, shape=[None, bottleneck_tensor_size], name="BottleneckInputPlaceholder")
+            bottleneck_input = tf.placeholder_with_default(self.bottleneck_tensor, shape=[None, bottleneck_tensor_size],
+                                                           name="BottleneckInputPlaceholder")
 
             ground_truth_input = [
                 tf.placeholder(tf.float32, shape=[None, 1], name='roll_GroundTruthInput'),
@@ -471,9 +472,12 @@ class Model:
 
         with tf.name_scope('final_retrain_ops'):
             with tf.name_scope('weights'):
-                roll_layer_weights = tf.Variable(tf.truncated_normal([bottleneck_tensor_size, 1], stddev=0.001), name='roll_final_weights')
-                pitch_layer_weights = tf.Variable(tf.truncated_normal([bottleneck_tensor_size, 1], stddev=0.001), name='pitch_final_weights')
-                yaw_layer_weights = tf.Variable(tf.truncated_normal([bottleneck_tensor_size, 1], stddev=0.001), name='yaw_final_weights')
+                roll_layer_weights = tf.Variable(tf.truncated_normal([bottleneck_tensor_size, 1], stddev=0.001),
+                                                 name='roll_final_weights')
+                pitch_layer_weights = tf.Variable(tf.truncated_normal([bottleneck_tensor_size, 1], stddev=0.001),
+                                                  name='pitch_final_weights')
+                yaw_layer_weights = tf.Variable(tf.truncated_normal([bottleneck_tensor_size, 1], stddev=0.001),
+                                                name='yaw_final_weights')
 
                 tf.summary.scalar(roll_layer_weights)
                 tf.summary.scalar(pitch_layer_weights)
@@ -501,7 +505,6 @@ class Model:
                 else:
                     tf.contrib.quantize.create_eval_graph()
 
-
             if not is_training:
                 return None, None, bottleneck_input, ground_truth_input, last_layer
 
@@ -517,16 +520,17 @@ class Model:
                 roll_mse_loss = tf.losses.mean_squared_error(labels=ground_truth_input[0], predictions=roll_logits)
                 tf.summary.scalar('Roll_Error', roll_mse_loss)
 
-
             with tf.name_scope('train'):
                 roll_optimizer = tf.train.AdamOptimizer(FLAGS.learning_rate)
-                roll_train_step = roll_optimizer.minimize(roll_mse_loss, var_list=[roll_layer_weights, roll_layer_biases])
+                roll_train_step = roll_optimizer.minimize(roll_mse_loss,
+                                                          var_list=[roll_layer_weights, roll_layer_biases])
 
                 yaw_optimizer = tf.train.AdamOptimizer(FLAGS.learning_rate)
                 yaw_train_step = yaw_optimizer.minimize(yaw_mse_loss, var_list=(yaw_layer_weights, yaw_layer_biases))
 
                 pitch_optimizer = tf.train.AdamOptimizer(FLAGS.learning_rate)
-                pitch_train_step = pitch_optimizer.minimize(pitch_mse_loss, var_list=(pitch_layer_weights, pitch_layer_biases))
+                pitch_train_step = pitch_optimizer.minimize(pitch_mse_loss,
+                                                            var_list=(pitch_layer_weights, pitch_layer_biases))
 
             train_step = [roll_train_step, yaw_train_step, pitch_train_step]
             loss = [roll_mse_loss, yaw_mse_loss, pitch_mse_loss]
@@ -537,17 +541,19 @@ class Model:
     def add_eval_step(result_tensor, ground_truth_tensor):
         with tf.name_scope('correlations'):
             with tf.name_scope('Yaw_correlation'):
-                yaw_correlation, yaw_update_op = streaming_pearson_correlation(predictions=result_tensor[0], labels=ground_truth_tensor[0])
+                yaw_correlation, yaw_update_op = streaming_pearson_correlation(predictions=result_tensor[0],
+                                                                               labels=ground_truth_tensor[0])
                 tf.summary.scalar('Yaw_correlation', yaw_update_op)
 
             with tf.name_scope('Roll_correlation'):
-                roll_correlation, roll_update_op = streaming_pearson_correlation(predictions=result_tensor[1], labels=ground_truth_tensor[1])
+                roll_correlation, roll_update_op = streaming_pearson_correlation(predictions=result_tensor[1],
+                                                                                 labels=ground_truth_tensor[1])
                 tf.summary.scalar('Roll_correlation', roll_update_op)
 
             with tf.name_scope('Pitch_correlation'):
-                pitch_correlation, pitch_update_op = streaming_pearson_correlation(predictions=result_tensor[2], labels=ground_truth_tensor[2])
+                pitch_correlation, pitch_update_op = streaming_pearson_correlation(predictions=result_tensor[2],
+                                                                                   labels=ground_truth_tensor[2])
                 tf.summary.scalar('Pitch_correlation', pitch_update_op)
-
 
             final_correlations = [yaw_correlation, roll_correlation, pitch_correlation]
             streaming_correlations = [yaw_update_op, roll_update_op, pitch_update_op]
@@ -583,13 +589,14 @@ class Model:
         )
 
         average_test_correlation = tf.reduce_mean(test_correlation_values)
-        tf.logging.info('Final average test correlation = %.1f'%(average_test_correlation))
+        tf.logging.info('Final average test correlation = %.1f' % (average_test_correlation))
 
     def save_graph(self, file_name):
         sess, _, _, _, _, _ = self.build_eval_sess()
         graph = sess.graph
 
-        output_graph_def = graph_util.convert_variables_to_constants(sess, graph.as_graph_def(), ['final_retrain_ops/Wx_plus_b' + self.flags.final_tensor_name])
+        output_graph_def = graph_util.convert_variables_to_constants(sess, graph.as_graph_def(), [
+            'final_retrain_ops/Wx_plus_b' + self.flags.final_tensor_name])
 
         with gfile.FastGFile(file_name, 'wb') as f_handle:
             f_handle.write(output_graph_def.SerializeToString())
@@ -602,106 +609,109 @@ class Model:
     def set_bottlenecks(self, bottlenecks):
         self._bottlenecks = bottlenecks
 
+
 def main_setup():
-    graphviz = GraphvizOutput()
-    graphviz.output_file = 'basic.png'
+    tf.logging.set_verbosity(tf.logging.INFO)
 
-    with PyCallGraph(output=graphviz):
-        tf.logging.set_verbosity(tf.logging.INFO)
+    model = Model(FLAGS)
+    images = ImageDataset(FLAGS)
 
-        model = Model(FLAGS)
-        images = ImageDataset(FLAGS)
+    with model.graph.as_default():
+        train_step, mse_loss, bottleneck_input, ground_truth_input, last_layer = model.add_final_retrain_ops(
+            is_training=True)
 
-        with model.graph.as_default():
-            train_step, mse_loss, bottleneck_input, ground_truth_input, last_layer = model.add_final_retrain_ops(is_training=True)
+    with tf.Session(graph=model.graph) as sess:
+        jpeg_data_tensor, decoded_image_tensor = model.add_jpeg_decoding()
 
-        with tf.Session(graph=model.graph) as sess:
-            jpeg_data_tensor, decoded_image_tensor = model.add_jpeg_decoding()
+        bottlenecks = Bottlenecks(
+            sess, images, model.flags.bottleneck_dir, model.flags.architecture, jpeg_data_tensor,
+            decoded_image_tensor, model.resized_input_tensor, model.bottleneck_tensor
+        )
 
-            bottlenecks = Bottlenecks(
-                sess, images, model.flags.bottleneck_dir, model.flags.architecture, jpeg_data_tensor,
-                decoded_image_tensor, model.resized_input_tensor, model.bottleneck_tensor
+        model.set_bottlenecks(bottlenecks)
+
+        streaming_correlations, final_correlations = model.add_eval_step(last_layer, ground_truth_input)
+        merged = tf.summary.merge_all()
+        train_writer = tf.summary.FileWriter(FLAGS.summaries_dir + '/train', sess.graph)
+        validation_writer = tf.summary.FileWriter(FLAGS.summaries_dir + '/validation', sess.graph)
+
+        train_saver = tf.train.Saver()
+
+        init = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
+        sess.run(init)
+
+        for i in range(FLAGS.how_many_training_steps):
+            print("reached_step: %d" % (i))
+            train_bottlenecks, train_ground_truth = model.bottlenecks.get_rand_cached(FLAGS.train_batch_size,
+                                                                                      'training')
+            train_summary, _ = sess.run(
+                [merged, train_step],
+                feed_dict={
+                    bottleneck_input: train_bottlenecks,
+                    ground_truth_input[0]: train_ground_truth[:, 0].reshape(-1, 1),
+                    ground_truth_input[1]: train_ground_truth[:, 1].reshape(-1, 1),
+                    ground_truth_input[2]: train_ground_truth[:, 2].reshape(-1, 1)
+                }
             )
+            train_writer.add_summary(train_summary, i)
 
-            model.set_bottlenecks(bottlenecks)
-
-            streaming_correlations, final_correlations = model.add_eval_step(last_layer, ground_truth_input)
-            merged = tf.summary.merge_all()
-            train_writer = tf.summary.FileWriter(FLAGS.summaries_dir + '/train', sess.graph)
-            validation_writer = tf.summary.FileWriter(FLAGS.summaries_dir + '/validation', sess.graph)
-
-            train_saver = tf.train.Saver()
-
-            init = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
-            sess.run(init)
-
-            for i in range(FLAGS.how_many_training_steps):
-                print("reached_step: %d"%(i))
-                train_bottlenecks, train_ground_truth = model.bottlenecks.get_rand_cached(FLAGS.train_batch_size, 'training')
-                train_summary, _ = sess.run(
-                    [merged, train_step],
+            is_last_step = (i + 1 == FLAGS.how_many_training_steps)
+            if (i % FLAGS.eval_step_interval == 0) or is_last_step:
+                yaw_correlation, roll_correlation, pitch_correlation, yaw_loss, roll_loss, pitch_loss = sess.run(
+                    [streaming_correlations, mse_loss],
                     feed_dict={
-                        bottleneck_input:train_bottlenecks,
+                        bottleneck_input: train_bottlenecks,
                         ground_truth_input[0]: train_ground_truth[:, 0].reshape(-1, 1),
                         ground_truth_input[1]: train_ground_truth[:, 1].reshape(-1, 1),
                         ground_truth_input[2]: train_ground_truth[:, 2].reshape(-1, 1)
                     }
                 )
-                train_writer.add_summary(train_summary, i)
+                tf.logging.info('%s: Step %d: average loss:%.1f average correlation = %.1f' % (
+                datetime.now(), i, (yaw_loss + roll_loss + pitch_loss) / 3,
+                (yaw_correlation + roll_correlation + pitch_correlation) / 3))
 
-                is_last_step = (i + 1 == FLAGS.how_many_training_steps)
-                if (i % FLAGS.eval_step_interval == 0) or is_last_step:
-                    yaw_correlation, roll_correlation, pitch_correlation, yaw_loss, roll_loss, pitch_loss = sess.run(
-                        [streaming_correlations, mse_loss],
-                        feed_dict={
-                            bottleneck_input:train_bottlenecks,
-                            ground_truth_input[0]: train_ground_truth[:, 0].reshape(-1, 1),
-                            ground_truth_input[1]: train_ground_truth[:, 1].reshape(-1, 1),
-                            ground_truth_input[2]: train_ground_truth[:, 2].reshape(-1, 1)
-                        }
-                    )
-                    tf.logging.info('%s: Step %d: average loss:%.1f average correlation = %.1f'%(datetime.now(), i, (yaw_loss+roll_loss+pitch_loss)/3, (yaw_correlation+roll_correlation+pitch_correlation)/3))
+                validation_bottlenecks, validation_ground_truth = model.bottlenecks.get_rand_cached(
+                    model.flags.validation_batch_size, 'validation')
+                validation_summary, correlation_values = sess.run(
+                    [merged, streaming_correlations],
+                    feed_dict={
+                        bottleneck_input: validation_bottlenecks,
+                        ground_truth_input[0]: validation_ground_truth[:, 0].reshape(-1, 1),
+                        ground_truth_input[1]: validation_ground_truth[:, 1].reshape(-1, 1),
+                        ground_truth_input[2]: validation_ground_truth[:, 2].reshape(-1, 1)
+                    }
+                )
 
-                    validation_bottlenecks, validation_ground_truth = model.bottlenecks.get_rand_cached(model.flags.validation_batch_size, 'validation')
-                    validation_summary, correlation_values = sess.run(
-                        [merged, streaming_correlations],
-                        feed_dict={
-                            bottleneck_input:validation_bottlenecks,
-                            ground_truth_input[0]: validation_ground_truth[:, 0].reshape(-1, 1),
-                            ground_truth_input[1]: validation_ground_truth[:, 1].reshape(-1, 1),
-                            ground_truth_input[2]: validation_ground_truth[:, 2].reshape(-1, 1)
-                        }
-                    )
+                average_validation_correlation = np.mean(correlation_values)
 
-                    average_validation_correlation = np.mean(correlation_values)
+                validation_writer.add_summary(validation_summary, i)
+                tf.logging.info('%s: Step %d: Validation correlation = %1.1f (N=%d)' % (
+                datetime.now(), i, average_validation_correlation, len(validation_bottlenecks)))
 
-                    validation_writer.add_summary(validation_summary, i)
-                    tf.logging.info('%s: Step %d: Validation correlation = %1.1f (N=%d)'%(datetime.now(), i, average_validation_correlation, len(validation_bottlenecks)))
+            intermediate_frequency = FLAGS.intermediate_store_frequency
 
-                intermediate_frequency = FLAGS.intermediate_store_frequency
+            if (intermediate_frequency > 10 and (i % intermediate_frequency == 0) and i > 0):
+                train_saver.save(sess, CHECKPOINT_NAME)
+                intermediate_file_name = (FLAGS.intermediate_output_graph_dir + 'intermediate' + str(i) + '.pb')
+                model.save_graph(intermediate_file_name)
+        train_saver.save(sess, CHECKPOINT_NAME)
 
-                if(intermediate_frequency > 10 and (i % intermediate_frequency == 0) and i > 0):
-                    train_saver.save(sess, CHECKPOINT_NAME)
-                    intermediate_file_name = (FLAGS.intermediate_output_graph_dir + 'intermediate' + str(i) + '.pb')
-                    model.save_graph(intermediate_file_name)
-            train_saver.save(sess, CHECKPOINT_NAME)
+        test_bottlenecks, test_ground_truths = model.bottlenecks.get_rand_cached(FLAGS.test_batch_size, 'testing')
 
-            test_bottlenecks, test_ground_truths = model.bottlenecks.get_rand_cached(FLAGS.test_batch_size, 'testing')
+        final_answers, rotation_vals = sess.run(
+            [final_correlations, last_layer],
+            feed_dict={
+                bottleneck_input: test_bottlenecks,
+                ground_truth_input[0]: test_ground_truths[:, 0].reshape(-1, 1),
+                ground_truth_input[1]: test_ground_truths[:, 1].reshape(-1, 1),
+                ground_truth_input[2]: test_ground_truths[:, 2].reshape(-1, 1)
+            }
+        )
 
-            final_answers, rotation_vals = sess.run(
-                [final_correlations, last_layer],
-                feed_dict={
-                    bottleneck_input:test_bottlenecks,
-                    ground_truth_input[0]: test_ground_truths[:, 0].reshape(-1, 1),
-                    ground_truth_input[1]: test_ground_truths[:, 1].reshape(-1, 1),
-                    ground_truth_input[2]: test_ground_truths[:, 2].reshape(-1, 1)
-                }
-            )
-
-            print('final_answers: ', np.sum(final_answers)/3)
-            print('rotation_vals: ', rotation_vals)
-            tf.logging.info("Saving final graph at: " + FLAGS.output_graph)
-            model.save_graph(FLAGS.output_graph)
+        print('final_answers: ', np.sum(final_answers) / 3)
+        print('rotation_vals: ', rotation_vals)
+        tf.logging.info("Saving final graph at: " + FLAGS.output_graph)
+        model.save_graph(FLAGS.output_graph)
 
 
 if __name__ == "__main__":
