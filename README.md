@@ -14,20 +14,30 @@ retraining image classification models.
 ## Changelogs
 
 
-## Todos
+## Todo
 
-#### Be able to run the code
-- [x] Download the datasets
-- [ ] Dataset  extraction
+### Running the code
+- [x] **Download the datasets**
+  - present under `./data/raw`
+
+
+- [ ] **Dataset extraction**
   - [x] Extract the dataset and draw the yaw, pitch and roll axis on the images
-  - [ ] Try using the roll, yaw and pitch values to draw axis on the face images
+  - [x] Try using the roll, yaw and pitch values to draw axis on the face images
     - [x] setup env and run a sample
-    - [ ] check for the correctness of the values
+    - [x] check for the correctness of the values
   - [ ] Bring the dataset to a format which can be used by the current script
-- [ ] Run the code to see what results does it produce
+    - [ ] Check if it's needed in a certain format to create bottlenecks
+      - The images can be left as it is but the euler angles need to be put in a `\t` detlimited csv file
+      -  [ ] Create the csv file from above
+    - [x] Find the script for bottlenecks
+      - Done by the retrain.py script
 
 
-#### Refactoring the code
+- [ ] **Execute a successful run**
+
+
+### Refactoring the code
 - [ ] Formulate a refactoring strategy
 
 
