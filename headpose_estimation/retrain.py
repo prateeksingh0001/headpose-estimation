@@ -291,8 +291,8 @@ class Model:
         if tf.gfile.Exists(self.flags.summaries_dir):
             tf.gfile.DeleteRecursively(self.flags.summaries_dir)
             tf.gfile.MakeDirs(self.flags.summaries_dir)
-        if self.flags.intermediate_store_frequency > 0:
-            self.create_dest_dir(self.flags.intermediate_output_graph_dir)
+        # if self.flags.intermediate_store_frequency > 0:
+        #     self.create_dest_dir(self.flags.intermediate_output_graph_dir)
 
         self.create_model_info()
 
@@ -318,10 +318,9 @@ class Model:
             sys.stdout.write(
                 '\r>> Downloading %s %.1f%%' % (self.filename, float(count * block_size) / float(total_size) * 100.0))
             sys.stdout.flush()
-            filepath, _ = urllib.request.urlretrieve(self.model_info['data_url'], self.filepath,
-                                                     _progress)  #### filepath clobbered !!!
-            statinfo = os.stat(filepath)
-            tf.logging.info('Successfully downloaded %s %d bytes.', self.filename, statinfo.st_size)
+        filepath, _ = urllib.request.urlretrieve(self.model_info['data_url'], self.filepath, _progress)  #### filepath clobbered !!!
+        statinfo = os.stat(filepath)
+        tf.logging.info('Successfully downloaded %s %d bytes.', self.filename, statinfo.st_size)
 
     def extract(self):
         print('Extracting file from ', self.filepath)
@@ -331,7 +330,7 @@ class Model:
         if os.path.exists(self.filepath):
             print('Not extracting or downloading files, model already present in disk')
         else:
-            self.create_dest_dir(self.filepath)
+            # self.create_dest_dir(self.filepath)
             self.download()
             self.extract()
 
