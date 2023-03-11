@@ -5,6 +5,7 @@ _libgcc_mutex=0.1=main
 _openmp_mutex=5.1=1_gnu
 absl-py=1.4.0=pypi_0
 astor=0.8.1=pypi_0
+black==22.8.0
 ca-certificates=2023.01.10=h06a4308_0
 certifi=2021.5.30=py36h06a4308_0
 dataclasses=0.8=pypi_0
