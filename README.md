@@ -1,7 +1,7 @@
 # Transfer-learning-for-head-pose-detection
 
-This project is an implementation of the [Hopenet Architecture](https://arxiv.org/pdf/1710.00925.pdf), and builds up on
-this tensorflow [example script](https://github.com/tensorflow/hub/tree/master/examples/image_retraining) for
+This project is an twist on the [Hopenet Architecture](https://arxiv.org/pdf/1710.00925.pdf), and builds up on
+this tensorflow [example script](https://github.com/tensorflow/tensorflow/blob/v1.7.0/tensorflow/examples/image_retraining/retrain.py) for
 retraining image classification models.
 
 
@@ -26,10 +26,10 @@ retraining image classification models.
   - [x] Try using the roll, yaw and pitch values to draw axis on the face images
     - [x] setup env and run a sample
     - [x] check for the correctness of the values
-  - [ ] Bring the dataset to a format which can be used by the current script
-    - [ ] Check if it's needed in a certain format to create bottlenecks
+  - [x] Bring the dataset to a format which can be used by the current script
+    - [x] Check if it's needed in a certain format to create bottlenecks
       - The images can be left as it is but the euler angles need to be put in a `\t` detlimited csv file
-      -  [ ] Create the csv file from above
+      -  [x] Create the csv file from above
     - [x] Find the script for bottlenecks
       - Done by the retrain.py script
 

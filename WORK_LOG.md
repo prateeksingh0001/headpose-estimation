@@ -1,3 +1,22 @@
+**2023-03-10**
+
+* Ran the code - unsuccessfully the first time using a debugger, was able to debug some early issues in the code to
+  download of the base model.
+* Currently the code has quite a few bugs, some of which I had to resolve as I am trying to make to code run.
+* Action plan going forward:
+  1. Make the code run - this might require us to refactor/clean out a few components but let's do that.
+  2. For the first step we don't make any changes to the architecture, only changes and debugging to make that the
+     code works.
+  3. Once the code works we can work on it's architecture and clean it.
+
+
+**2023-03-09**
+
+* Changed my IDE from Intellij to VSCode, much much more lighter, with  a lot more extensions, my computer has become
+  silent again. Was able to setup debugging configurations and and a complete env for development.
+* Ran the code for the first time in this project, faced some errors, I'll come back to this and re-run it tomorrow.
+
+
 **2023-03-05**
 
 * Created a function under scripts/jupyter/dataset_exploration.ipynb to load image and the data(euler angles) associated
