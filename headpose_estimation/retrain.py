@@ -1,20 +1,23 @@
-import os
-import re
-import csv
-import sys
-import random
-import hashlib
-import tarfile
+from typing import List
+
 import argparse
+import csv
+import hashlib
+import os
+from pathlib import Path
+import random
+import re
+import sys
+import tarfile
 from datetime import datetime
-from six.moves import urllib
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.util import compat
-from tensorflow.python.platform import gfile
-from tensorflow.python.framework import graph_util
+from six.moves import urllib
 from tensorflow.contrib.metrics import streaming_pearson_correlation
+from tensorflow.python.framework import graph_util
+from tensorflow.python.platform import gfile
+from tensorflow.python.util import compat
 
 VAL = 2 ** 27 + 1
 CHECKPOINT_NAME = '/tmp/_retrain_checkpoint'
@@ -116,6 +119,7 @@ class ImageDataset:
         self.test_percent = flags.testing_percentage
         self.valid_percent = flags.validation_percentage
         self.gt_file = flags.labels_file
+        self.file_list = {}
         self.results = {}
         self.create_img_list()
 
@@ -125,28 +129,30 @@ class ImageDataset:
             return
 
         extensions = ['jpg', 'jpeg', 'JPG', 'JPEG']
-        file_list = []
-        labels = []
+        file_list: List[Path] = []
+        labels = {}
 
         # TODO: convert to list comprehension
         for extension in extensions:
-            file_list.extend(gfile.Glob(os.path.join(self.image_dir, '*.' + extension)))
+            file_list.extend(list(Path(self.image_dir).rglob(f"*.{extension}")))
+
+        self.file_list = {file_path.name: str(file_path) for file_path in file_list}
 
         if not file_list:
-            tf.logging.warning('No files found')  # TODO: check if it returns too
-            return
+            raise RuntimeError('No files found')
 
         with open(self.gt_file, 'r') as csvfile:
             label_file = csv.reader(csvfile, delimiter='\t')
             for row in label_file:
-                labels.append([float(values) for values in row])  # TODO: convert to list comprehension
+                labels[row[0]] = [float(value) for value in row[1:]] 
+                # labels.append([float(values) for values in row[1:]])  # TODO: convert to list comprehension
 
         training_images = []
         testing_images = []
         validation_images = []
         for file_name in file_list:
             base_name = os.path.basename(file_name)
-            hash_name = re.sub(r'_nohash_.*$', '', file_name)
+            hash_name = re.sub(r'_nohash_.*$', '', str(file_name))
 
             hash_name_hashed = hashlib.sha1(compat.as_bytes(hash_name)).hexdigest()
             percentage_hash = ((int(hash_name_hashed, 16) % (VAL)) * (100.0 / VAL))
@@ -175,8 +181,9 @@ class ImageDataset:
         if not category_list:
             tf.logging.fatal('Category %s has no images', category)
         base_name = category_list[index]
-        full_path = os.path.join(self.image_dir, base_name)
-        return full_path
+        return self.file_list[base_name]
+        # full_path = os.path.join(self.image_dir, base_name)
+        # return full_path
 
     def get_ground_truth(self, index, category):
         img_name = self.get_path(index, category)
@@ -189,40 +196,56 @@ class ImageDataset:
 
 
 class Bottlenecks:
-    def __init__(self, sess, image_data, bdir, architecture, bottleneck_tensor):
+    def __init__(
+            self,
+            sess,
+            image_data,
+            bdir,
+            architecture,
+            jpeg_data_tensor,
+            decoded_image_tensor, 
+            resized_input_tensor,
+            bottleneck_tensor
+        ):
         self.sess = sess
         self.image_dataset = image_data
         self.bdir = bdir
         self.architecture = architecture
+        self.jpeg_data_tensor = jpeg_data_tensor
+        self.decoded_image_tensor = decoded_image_tensor
+        self.resized_input_tensor = resized_input_tensor
         self.bottleneck_tensor = bottleneck_tensor
 
         self.cache()
 
     def run_on_image(self, image_data):
-        value = self.sess.run(self.bottleneck_tensor, feed_dict={self.resized_input_tensor: image_data})
+        # value = self.sess.run(self.bottleneck_tensor, feed_dict={self.resized_input_tensor: image_data})
+        value = self.sess.run(self.decoded_image_tensor, feed_dict={self.jpeg_data_tensor: image_data})
         return np.squeeze(value)
 
     def create_file(self, path, index, category):
-        tf.logging.info('Creating bottleneck at ' + path)
+        tf.logging.info('creating bottleneck at ' + path)
         image_path = self.image_dataset.get_path(index, category)
         if not gfile.Exists(image_path):
-            tf.logging.fatal('File does not exists %s', image_path)
+            tf.logging.fatal('file does not exists %s', image_path)
         image_data = gfile.FastGFile(image_path, 'rb').read()
         try:
             value = self.run_on_image(image_data)
         except Exception as exep:
-            raise RuntimeError('Error during processing file %s (%s)' % (image_path, str(exep)))
+            raise RuntimeError('error during processing file %s (%s)' % (image_path, str(exep)))
 
-        bstring = ','.join(str(x) for x in value)
-        with open(path, 'w') as bfile:
-            bfile.write(bstring)
+        # bstring = np.array_str(value)
+        # bstring = ','.join(str(x) for x in value)
+        np.save(path, value, allow_pickle=False)
+        # with open(path, 'w') as bfile:
+        #     bfile.write(bstring)
 
     def get_path(self, index, category):
         if category not in self.image_dataset.results:
-            tf.logging.fatal('Category does not exists %s', category)
+            tf.logging.fatal('category does not exists %s', category)
         category_list = self.image_dataset.results[category]
         if not category_list:
-            tf.logging.fatal('Category %s has no images', category)
+            tf.logging.fatal('category %s has no images', category)
 
         base_name = category_list[index]
         full_path = os.path.join(self.bdir, base_name) + '_' + self.architecture + '.txt'
@@ -231,26 +254,27 @@ class Bottlenecks:
     def get_or_create(self, index, category):
         path = self.get_path(index, category)
 
-        if not os.path.exists(path):
+        if not os.path.exists(f"{path}.npy"):
             self.create_file(path, index, category)
 
-        with open(path, 'r') as bfile:
-            bstring = bfile.read()
+        bvalues = np.load(f"{path}.npy")
+        # with open(path, 'r') as bfile:
+        #     bstring = bfile.read()
 
-        did_hit_error = False
-        try:
-            bvalues = [float(x) for x in bstring.split(',')]
-        except ValueError:
-            tf.logging.warning('Inavlid float found, recreating bottlenecks')
-            did_hit_error = True
+        # did_hit_error = False
+        # try:
+        #     bvalues = np.fromstring(bstring)
+        # except ValueError:
+        #     tf.logging.warning('inavlid float found, recreating bottlenecks')
+        #     did_hit_error = True
 
-        if did_hit_error:
-            self.create_file(path, index, category)
+        # if did_hit_error:
+        #     self.create_file(path, index, category)
 
-        with open(path, 'r') as bfile:
-            bstring = bfile.read()
+        # with open(path, 'r') as bfile:
+        #     bstring = bfile.read()
 
-        bvalues = [float(x) for x in bstring.split(',')]
+        # bvalues = [float(x) for x in bstring.split(',')]
         return bvalues
 
     def cache(self):
@@ -330,7 +354,8 @@ class Model:
         if os.path.exists(self.filepath):
             print('Not extracting or downloading files, model already present in disk')
         else:
-            # self.create_dest_dir(self.filepath)
+            dirname = self.filepath
+            self.create_dest_dir(self.filepath)
             self.download()
             self.extract()
 
@@ -471,16 +496,13 @@ class Model:
 
         with tf.name_scope('final_retrain_ops'):
             with tf.name_scope('weights'):
-                roll_layer_weights = tf.Variable(tf.truncated_normal([bottleneck_tensor_size, 1], stddev=0.001),
-                                                 name='roll_final_weights')
-                pitch_layer_weights = tf.Variable(tf.truncated_normal([bottleneck_tensor_size, 1], stddev=0.001),
-                                                  name='pitch_final_weights')
-                yaw_layer_weights = tf.Variable(tf.truncated_normal([bottleneck_tensor_size, 1], stddev=0.001),
-                                                name='yaw_final_weights')
+                roll_layer_weights = tf.Variable(tf.truncated_normal([bottleneck_tensor_size, 1], stddev=0.001),name='roll_final_weights')
+                pitch_layer_weights = tf.Variable(tf.truncated_normal([bottleneck_tensor_size, 1], stddev=0.001),name='pitch_final_weights')
+                yaw_layer_weights = tf.Variable(tf.truncated_normal([bottleneck_tensor_size, 1], stddev=0.001),name='yaw_final_weights')
 
-                tf.summary.scalar(roll_layer_weights)
-                tf.summary.scalar(pitch_layer_weights)
-                tf.summary.scalar(yaw_layer_weights)
+                # tf.summary.scalar(roll_layer_weights)
+                # tf.summary.scalar(pitch_layer_weights)
+                # tf.summary.scalar(yaw_layer_weights)
 
             with tf.name_scope('biases'):
                 roll_layer_biases = tf.Variable(tf.zeros([1]), name='final_biases')
@@ -492,7 +514,7 @@ class Model:
                 pitch_logits = tf.matmul(bottleneck_input, pitch_layer_weights) + pitch_layer_biases
                 yaw_logits = tf.matmul(bottleneck_input, yaw_layer_weights) + yaw_layer_biases
 
-                tf.summary.histogram('yaw_regression    ', yaw_logits)
+                tf.summary.histogram('yaw_regression', yaw_logits)
                 tf.summary.histogram('pitch_regression', pitch_logits)
                 tf.summary.histogram('roll_regressions', roll_logits)
 
@@ -627,7 +649,7 @@ def main_setup():
             decoded_image_tensor, model.resized_input_tensor, model.bottleneck_tensor
         )
 
-        model.set_bottlenecks(bottlenecks)
+        model.set_bottlenecks = bottlenecks
 
         streaming_correlations, final_correlations = model.add_eval_step(last_layer, ground_truth_input)
         merged = tf.summary.merge_all()
