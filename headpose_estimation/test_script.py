@@ -59,7 +59,7 @@ def load_labels(label_file):
 		label.append(l.rstrip())
 	return label
 
-if __name__ == '__main__':i
+if __name__ == '__main__':
 
 	args = parse_args()
 
@@ -121,7 +121,7 @@ if __name__ == '__main__':i
 				y_max += int(2 * bbox_height / 4)
 				x_min = max(x_min, 0); y_min = max(y_min, 0)
 				x_max = min(frame.shape[1], x_max)
-				 y_max = min(frame_shape[0], y_max)
+				y_max = min(frame_shape[0], y_max)
 				face_img = cv2_frame[y_min:y_max, x_min:x_max]
 				face_img = Image.fromarray(img)
 				face_img = face_img.resize((128, 128), PIL.Image.ANTIALIAS)
