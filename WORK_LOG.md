@@ -1,7 +1,25 @@
+**2023-09-24**
+* Made some way into running the code, current updates:
+  * The model loads successfully
+  * The bottleneck creation is working fine
+  * Created a subset of the dataset because, creating bottlenecks for the entire dataset filled up my disk
+* Code refactors:
+  * Changed the API used for globbing files from tensorflow to pathlib
+  * Loading and saving numpy objects to disk. The previous code was converting each value in the array to string one-by-one(not sure if that was even working). The code now uses np.save and np.load functions
+  * Added typing-extensions to a few places, in the new code
+  * The bottlenecking code was calling wrong tensors and was passing inputs to the wrong tensors in the feed_dict, corrected that.
+  * Fixed the code to call correct tensorflow APIs, not sure if the wrong APIs were because of the tf version change or a bug in the code from when it was originally authored.
+* Next steps:
+  * Complete the end-to-end execution, the code should be able to finish a training run
+  * Move the configuration from command line configurations to the config file based system(YAML)
+  * Come up with a logical separation of different things, currently there is a lot of back and forth between objects
+  * We should use dataclasses to represent the training data records. Will make the code much more cleaner.
+
+
 **2023-03-10**
 
-* Ran the code - unsuccessfully the first time using a debugger, was able to debug some early issues in the code to
-  download of the base model.
+* Unsuccessfully ran the code for the first time using a debugger, was able to debug some early issues in the code to
+  download of the base mo*del.
 * Currently the code has quite a few bugs, some of which I had to resolve as I am trying to make to code run.
 * Action plan going forward:
   1. Make the code run - this might require us to refactor/clean out a few components but let's do that.

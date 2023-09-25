@@ -21,7 +21,7 @@ retraining image classification models.
   - present under `./data/raw`
 
 
-- [ ] **Dataset extraction**
+- [x] **Dataset extraction**
   - [x] Extract the dataset and draw the yaw, pitch and roll axis on the images
   - [x] Try using the roll, yaw and pitch values to draw axis on the face images
     - [x] setup env and run a sample
@@ -34,7 +34,8 @@ retraining image classification models.
       - Done by the retrain.py script
 
 
-- [ ] **Execute a successful run**
+- [ ] **Make the code run**
+  - [ ] Take the code through the debugger make changes where neccessary and get the code to a correct running state
 
 
 ### Refactoring the code
