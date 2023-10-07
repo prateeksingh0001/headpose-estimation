@@ -36,13 +36,14 @@ retraining image classification models.
 
 - [x] **Make the code run**
   - [x] Take the code through the debugger make changes where neccessary and get the code to a correct running state
+    - Changes done to bring the code running are logged in WORK_LOG.md between dates (2023-03-10 and 2023-10-07)
 
 
 ### Refactoring the code
 - [ ] Formulate a refactoring strategy
-  - [] Refactor the cmdline argument parsing and passing to the main function.
-  - [] Formulate a class structure which reduces cross object variable access and function calling.(more modular)
-  - [] Introduce typing annotations
+  - [ ] Refactor the cmdline argument parsing and passing to the main function.
+  - [ ] Formulate a class structure which reduces cross object variable access and function calling.(more modular)
+  - [ ] Introduce typing annotations
 
 
 #### Author: Prateek Singh
