@@ -34,13 +34,15 @@ retraining image classification models.
       - Done by the retrain.py script
 
 
-- [ ] **Make the code run**
-  - [ ] Take the code through the debugger make changes where neccessary and get the code to a correct running state
+- [x] **Make the code run**
+  - [x] Take the code through the debugger make changes where neccessary and get the code to a correct running state
 
 
 ### Refactoring the code
 - [ ] Formulate a refactoring strategy
-
+  - [] Refactor the cmdline argument parsing and passing to the main function.
+  - [] Formulate a class structure which reduces cross object variable access and function calling.(more modular)
+  - [] Introduce typing annotations
 
 
 #### Author: Prateek Singh

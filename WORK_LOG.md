@@ -1,4 +1,27 @@
+**2023-10-07**
+
+* The code finally runs end to end completely. The correctness needs to be checked. #win
+* Updates:
+  * Refactored the indexing code of the image ground truths
+  * Refactored the code to invoke bottleneck creation, previously the images were only being resized and not passed through the model.
+  * Refactored correct tensors to be called to pass the bottlenecks through the model.
+  * Changed the indexing of the ground truths being passing during training. The ground truth shape is (batch_size, 3)
+    * 3 because we have yaw, pitch and roll values
+  * Tried tensorflow debugger, did not find it useful for debugging
+    * Only allows you to set filters and stop when those filters are activated.
+    * Cannot run step by step through the execution graph
+    * Solutions:
+      * Can look into eager execution, will need to design code such that it can be run both way through eager execution and throught compiled graph execution(low priority maybe once I'm done refactoring)
+      * Can look into tool that let you load a tensorflow graph and run throught it.
+  * Changed the name of the operation being converted to constant during model saving
+* Next steps:
+  * Parametrizing the arguments
+    1. Need to create a config class that can either read the args from command line or read them from a YAML config
+    2. Refactor the code to pull arguments from the config class rather than through the `FLAGS` and `UNPARSED` variables
+
+
 **2023-09-24**
+
 * Made some way into running the code, current updates:
   * The model loads successfully
   * The bottleneck creation is working fine
