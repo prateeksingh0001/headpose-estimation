@@ -14,6 +14,7 @@
       * Can look into eager execution, will need to design code such that it can be run both way through eager execution and throught compiled graph execution(low priority maybe once I'm done refactoring)
       * Can look into tool that let you load a tensorflow graph and run throught it.
   * Changed the name of the operation being converted to constant during model saving
+  * Setup black file formatting.
 * Next steps:
   * Parametrizing the arguments
     1. Need to create a config class that can either read the args from command line or read them from a YAML config
