@@ -1,3 +1,17 @@
+**2023-10-08**
+* Updates:
+  * Refactored the arguments to be parsed from both a YAML file and commandline
+  * Added a yaml config to running experiments
+  * upgraded python version to 3.7, since 3.6 and below do not have from \__future__ import annotations
+  * The code works fine with the YAML config file
+* Next steps:
+  * Time to think about the rest of the code and how it should be organized between classes.
+    * Need to come up with an architecture
+    * Dataclasses for input data and the labels(would be better to ensure there is no mixup of data)
+    * The last few layer(final layer to be retrained) should be detachable from the base model.
+  * Move the execution script(in retrain.py) to scripts/python
+
+
 **2023-10-07**
 
 * The code finally runs end to end completely. The correctness needs to be checked. #win
