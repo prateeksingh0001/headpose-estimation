@@ -1,6 +1,5 @@
 from typing import List
 
-import argparse
 import csv
 import hashlib
 import os
@@ -19,136 +18,11 @@ from tensorflow.python.framework import graph_util
 from tensorflow.python.platform import gfile
 from tensorflow.python.util import compat
 
+from headpose_estimation.config import ExperimentConfig
+
 
 VAL = 2**27 + 1
 CHECKPOINT_NAME = "/tmp/_retrain_checkpoint"
-
-
-def parse_arguments():
-    parser = argparse.ArgumentParser(
-        description="Image retraining for headpose estimation using mutiple FC layers"
-    )
-
-    parser.add_argument(
-        "--architecture",
-        type=str,
-        dest="architecture",
-        help="architecture to be used in the frontend",
-    )
-    parser.add_argument(
-        "--model_dir",
-        type=str,
-        dest="model_dir",
-        help="The directory where the model is to be saved",
-    )
-    parser.add_argument(
-        "--image_dir", type=str, dest="image_dir", help="The directory to store images"
-    )
-    parser.add_argument(
-        "--labels_file",
-        type=str,
-        dest="labels_file",
-        help="The path to the file with all the labels",
-    )
-    parser.add_argument(
-        "--summaries_dir",
-        type=str,
-        dest="summaries_dir",
-        help="Directory for saving the summaries",
-    )
-    parser.add_argument(
-        "--how_many_training_steps",
-        type=int,
-        dest="how_many_training_steps",
-        help="Num training steps for training the model",
-    )
-    parser.add_argument(
-        "--learning_rate",
-        type=float,
-        default=0.01,
-        dest="learning_rate",
-        help="Learning rate for the algo",
-    )
-    parser.add_argument(
-        "--validation_percentage",
-        type=int,
-        dest="validation_percentage",
-        help="percentage of the dataset that is to be used for validation set",
-    )
-    parser.add_argument(
-        "--testing_percentage",
-        type=int,
-        dest="testing_percentage",
-        help="percentage of dataset that is to be used as test set",
-    )
-    parser.add_argument(
-        "--train_batch_size",
-        type=int,
-        default=5,
-        dest="train_batch_size",
-        help="Batch size for training",
-    )
-    parser.add_argument(
-        "--validation_batch_size",
-        type=int,
-        default=5,
-        dest="validation_batch_size",
-        help="Batch size for validation",
-    )
-    parser.add_argument(
-        "--test_batch_size",
-        type=int,
-        default=5,
-        dest="test_batch_size",
-        help="Batch size for testing",
-    )
-    parser.add_argument(
-        "--bottleneck_dir",
-        type=str,
-        dest="bottleneck_dir",
-        help="Directory where the bottleneck tensors are stored",
-    )
-    parser.add_argument(
-        "--saved_model_dir",
-        type=str,
-        dest="saved_mode_dir",
-        help="Where to save the exported graph",
-    )
-    parser.add_argument(
-        "--final_tensor_name",
-        type=str,
-        default="final_tensor_name",
-        help="""The name of the output classification layer in the retrained graph.""",
-    )
-    parser.add_argument(
-        "--output_graph",
-        type=str,
-        default="/tmp/retrained_graph.pb",
-        help="""The name of the output classification layer in the retrained graph.""",
-    )
-    parser.add_argument(
-        "--intermediate_store_frequency",
-        default=100,
-        type=int,
-        dest="intermediate_store_frequency",
-        help="When to store the intermediate graphs",
-    )
-    parser.add_argument(
-        "--intermediate_output_graph_dir",
-        type=str,
-        default="/tmp/intermediate_graphs/",
-        dest="intermediate_output_graph_dir",
-        help="Where to stor the intermediate graphs",
-    )
-    parser.add_argument(
-        "--eval_step_interval",
-        type=int,
-        default=10,
-        dest="eval_step_interval",
-        help="""How often to evaluate the training results""",
-    )
-    flags, unparsed_args = parser.parse_known_args()
-    return flags, unparsed_args
 
 
 class ImageDataset:
@@ -778,7 +652,7 @@ class Model:
         self._bottlenecks = bottlenecks
 
 
-def main_setup(_):
+def main_setup(FLAGS):
     tf.logging.set_verbosity(tf.logging.INFO)
 
     model = Model(FLAGS)
@@ -939,5 +813,7 @@ def main_setup(_):
 
 
 if __name__ == "__main__":
-    FLAGS, UNPARSED = parse_arguments()
-    tf.app.run(main=main_setup, argv=[sys.argv[0]] + UNPARSED)
+    # FLAGS, UNPARSED = parse_arguments()
+    FLAGS = ExperimentConfig.from_args()
+    main_setup(FLAGS)
+    # tf.app.run(main=main_setup, argv=[sys.argv[0]])
