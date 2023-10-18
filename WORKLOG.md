@@ -1,3 +1,13 @@
+**2023-10-18**
+* Updates:
+  * Moved the base(Inception) model downloading, extraction and graph creation into a separate class
+* Next steps:
+  * Update the class to be able to download and load the model from itself and be also able to load
+    the model from disk if already present
+  * Run small unit test to ensure that the system is working as expected
+  * Keep structuring the classes
+
+
 **2023-10-08**
 * Updates:
   * Refactored the arguments to be parsed from both a YAML file and commandline
