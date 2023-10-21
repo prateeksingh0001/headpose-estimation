@@ -4,9 +4,9 @@ import tensorflow as tf
 
 class BaseModel:
 
-    def predict(self, *arg, **kwargs) -> tf.Tensor:
-        raise NotImplementedError(f"method predict for not implemented for {self.__class__.__name__}")
+    def forward(self, *arg, **kwargs) -> tf.Tensor:
+        raise NotImplementedError(f"forward for not implemented for {self.__class__.__name__}")
 
     @abstractmethod
-    def create_model_graph(self):
+    def create_model_graph(self, model_dir: str):
         raise NotImplementedError(f"method create_train_graph is not implemented for {self.__class__.__name__}")

@@ -1,4 +1,23 @@
+**2023-10-21**
+
+* Updates:
+  * Refactored the pretrained base model image class, removed unused variables combined functions into one and reduced
+    information passing across functions via global variables.
+  * Loaded the inception graph into memory and investigated for inputs and outputs, was able to find them on tensorboard,
+    but I need to check with an acutal input.
+* Next steps:
+  * Check whether the input and outputs of the graph are correct, by passing an image through the model.
+  * Further refactor the class for loading the pretrained image model.
+    * Move the model_info details to a config file, which is loaded during runtime
+    * Some functions like download and extract etc. can be combined into one larger function
+      * Current implementation go between levels of abstractions (sometime is high-level code, and the other times
+        it is low-level code). Can probably solve this with proper function creation in the class.
+  * Find out what other operations are being called in the original script for instantiating the backbone model.
+    * Possibly move those functions either pretrained_tf_img_model.py or the new canddidate.
+
+
 **2023-10-18**
+
 * Updates:
   * Moved the base(Inception) model downloading, extraction and graph creation into a separate class
 * Next steps:
@@ -9,6 +28,7 @@
 
 
 **2023-10-08**
+
 * Updates:
   * Refactored the arguments to be parsed from both a YAML file and commandline
   * Added a yaml config to running experiments
@@ -67,7 +87,7 @@
 **2023-03-10**
 
 * Unsuccessfully ran the code for the first time using a debugger, was able to debug some early issues in the code to
-  download of the base mo*del.
+  download the base model.
 * Currently the code has quite a few bugs, some of which I had to resolve as I am trying to make to code run.
 * Action plan going forward:
   1. Make the code run - this might require us to refactor/clean out a few components but let's do that.
@@ -78,7 +98,7 @@
 
 **2023-03-09**
 
-* Changed my IDE from Intellij to VSCode, much much more lighter, with  a lot more extensions, my computer has become
+* Changed my IDE from Intellij to VSCode, much much more lighter, with a lot more extensions, my computer has become
   silent again. Was able to setup debugging configurations and and a complete env for development.
 * Ran the code for the first time in this project, faced some errors, I'll come back to this and re-run it tomorrow.
 

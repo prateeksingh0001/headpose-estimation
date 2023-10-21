@@ -15,30 +15,47 @@ from headpose_estimation.models.base_model import BaseModel
 logger = logging.getLogger(__name__)
 
 
-class PretrainedImageModel(BaseModel):
+class PretrainedBaseImageModel(BaseModel):
+    """The large pretrained backbone image model class.
+    
+    This class will contain the backbone image model which will be used to
+    create the representations for the input image, which shall then be
+    used as the input to the final layers for predicting the yaw, pitch
+    and roll values.
 
-    def __init__(
-        self,
-        architecture: str,
-        model_path: str
-    ):architecture, 
+    Attributes:
+        architecture (str): name of the vision model architecture
+        model_path (str): Path on the disk where the model is downloaded to.
+                          If the model is already present at that path then
+                          it's not downloaded again.
+    """
+
+    def __init__(self, architecture: str, model_path: str):
+        """Initializes the instance based on model architecture and the model
+        save path
+
+        Args:
+            architecture (str): name of the vision model architecture
+            model_path (str): model path on disk where the model is saved or will
+                              be downloaded to.
+        """
 
         self.filename = None
-        self.filepath = None
-        self.flags = None
 
         self.model_info = self.create_model_info(architecture)
-        self.maybe_download_and_extract(model_path)
-
-    def maybe_download_and_extract(self, model_path: str) -> None:
-        if os.path.exists(model_path):
-            logger.INFO("Not extracting or downloading files, model already present in disk")
+        if not os.path.exists(model_path):
+            self.download_and_extract(model_path)
         else:
-            self.create_dest_dir(model_path)
-            self.download(model_path)
-            self.extract()
+            logger.info("model present on disk at %s", model_path)
 
-    def download(self, model_path: str) -> None:
+        self.model_graph, self.bottleneck_tensor, self.resized_input_tensor = self.create_model_graph(model_path)
+
+    def download_and_extract(self, model_path: str) -> None:
+        os.makedirs(os.path.dirname(model_path), exist_ok=True)
+        downloaded_model_artifact_path = self.download(model_path)
+        self.extract(downloaded_model_artifact_path, model_path)
+
+    def download(self, model_path: str) -> str:
         def _progress(count, block_size, total_size):
             sys.stdout.write(
                 "\r>> Downloading %s %.1f%%"
@@ -46,19 +63,20 @@ class PretrainedImageModel(BaseModel):
             )
             sys.stdout.flush()
 
-        filepath, _ = urllib.request.urlretrieve(self.model_info["data_url"], model_path, _progress)  #### filepath clobbered !!!
-        
+        filepath, _ = urllib.request.urlretrieve(
+            self.model_info["data_url"], model_path, _progress
+        )
         statinfo = os.stat(filepath)
-        logger.info("Successfully downloaded %s %d bytes.", self.filename, statinfo.st_size)
 
-    def extract(self) -> None:
-        logger.info(f"Extracting file from {self.filepath}")
-        tarfile.open(self.filepath, "r:gz").extractall(self.flags.model_dir)
+        logger.info(
+            "Successfully downloaded %s %d bytes.", self.filename, statinfo.st_size
+        )
+        return filepath
 
     @staticmethod
-    def create_dest_dir(directory):
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+    def extract(downloaded_model_zip_path: str, unzip_dir: str) -> None:
+        logger.info("Extracting file from %s", downloaded_model_zip_path)
+        tarfile.open(downloaded_model_zip_path, "r:gz").extractall(unzip_dir)
 
     def create_model_info(self, architecture: str) -> Dict[str, Any]:
         architecture = architecture.lower()
@@ -130,8 +148,7 @@ class PretrainedImageModel(BaseModel):
                 input_mean = 127.5
                 input_std = 127.5
         else:
-            tf.logging.error("Couldn't understand architecture name '%s'", architecture)
-            raise ValueError("Unknown architecture", architecture)
+            raise ValueError(f"Unknown architecture: {architecture}")
 
         return {
             "data_url": data_url,
@@ -147,16 +164,14 @@ class PretrainedImageModel(BaseModel):
             "quantize_layer": is_quantized,
         }
 
-    def create_model_graph(self):
+    def create_model_graph(self, model_dir: str):
         if not self.model_info:
             tf.logging.error("Did not recognize architecture flag")
             return -1
 
         with tf.Graph().as_default() as graph:
-            model_path = os.path.join(
-                FLAGS.model_dir, self.model_info["model_file_name"]
-            )
-            logger.info(f"Model path: {model_path}")
+            model_path = os.path.join(model_dir, self.model_info["model_file_name"])
+            logger.info("Model path: %s", model_path)
             with gfile.FastGFile(model_path, "rb") as f_handle:
                 graph_def = tf.GraphDef()
                 graph_def.ParseFromString(f_handle.read())
@@ -170,3 +185,6 @@ class PretrainedImageModel(BaseModel):
                 )
 
         return graph, bottleneck_tensor, resized_input_tensor
+
+    def forward(self, *arg, **kwargs) -> tf.Tensor:
+        raise NotImplementedError(f"forward method is not implemented for {self.__class__.__name__}")
