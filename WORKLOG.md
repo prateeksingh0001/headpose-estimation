@@ -16,6 +16,16 @@
   * Look into the downloading and refactoring part of the class, if it can be reduced.
   * Check the mobilenet graph for the presence of image decoding and input resizing operations
     * If not present, we should implement them in our class and shortcircuit for the inception model.
+  * Check whether the inception_v3 model can take a stack of mulitple inputs(i.e. 4-D inputs of the shape 
+    [batch_size, input_height, input_width, channels]).
+    * If that's not possible we might want to add our own input nodes like in points above
+  * It might be a good idea to make the baseline model more general, in case we ever want to use models that are not
+    inception or mobilenet.
+    * An easy idea for this is is to have some predefined models(for now inception and mobilenet) with their details
+      like download paths, input/output tensors etc.
+    * for the rest of the models we can provide the tf graph, model name and input/output nodes that can be directly
+      passed the the sess.run(). During class instantiation
+    * we can check whether the model was a string for model name or is a tf.Graph object.
   * Unit tests for [pretrained_tf_img_model.py](./headpose_estimation/models/pretrained_tf_img_model.py) lets use pytest
 
 
