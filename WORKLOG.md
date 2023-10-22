@@ -1,3 +1,24 @@
+**2023-10-22**
+
+* Updates:
+  * Continued refactoring the pretrained image model class.
+    * Tested loading a model graph in tensorflow, inspecting its operations and running and testing it with sample
+      inputs. Refere to the notebook [here](./scripts/jupyter/load_read_tf_graph.ipynb) for all the steps.
+    * Based on this it turns out that I don't need the steps in the function `add_jpeg_decoding` [here](./headpose_estimation/retrain.py#L419)
+      as the jpeg decoding from the bytes and the input resizing is all handled by the inception_v3 model.
+    * There could be the case that the mobilenet model does not handle these things and in that case we need to add
+      these operations separately.
+    * Also the input normalization operations are not present in the inception_v3 model and those need to be added. But
+      they are better off being handled during the dataset preprocessing stage. Maybe need to implement something like
+      the preprocessing functions in the pytorch dataloaders. Also unlike the input normalization being done currently
+      in retrain.py, it needs to be normalized between -1 and 1.
+* Next steps:
+  * Look into the downloading and refactoring part of the class, if it can be reduced.
+  * Check the mobilenet graph for the presence of image decoding and input resizing operations
+    * If not present, we should implement them in our class and shortcircuit for the inception model.
+  * Unit tests for [pretrained_tf_img_model.py](./headpose_estimation/models/pretrained_tf_img_model.py) lets use pytest
+
+
 **2023-10-21**
 
 * Updates:
