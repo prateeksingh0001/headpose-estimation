@@ -26,7 +26,13 @@
     * for the rest of the models we can provide the tf graph, model name and input/output nodes that can be directly
       passed the the sess.run(). During class instantiation
     * we can check whether the model was a string for model name or is a tf.Graph object.
-  * Unit tests for [pretrained_tf_img_model.py](./headpose_estimation/models/pretrained_tf_img_model.py) lets use pytest
+  * Unit tests for [pretrained_tf_img_model.py](./headpose_estimation/models/pretrained_tf_img_model.py)
+    * Potential solutions
+      1. Pytest
+      2. Tensorflow testing modules
+    * Can refer
+      1. [tensorflow unit testing best practices](https://github.com/GoogleCloudPlatform/professional-services/tree/main/examples/tensorflow-unit-testing)
+      2. Maybe useful [How to Unit Test Deep Learning: Tests in TensorFlow, mocking and test coverage](https://theaisummer.com/unit-test-deep-learning/#:~:text=Unit%20tests%20in%20Python,-Before%20we%20see%20some%20more)
 
 
 **2023-10-21**
