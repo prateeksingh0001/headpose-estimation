@@ -4,7 +4,7 @@ import tensorflow as tf
 
 class BaseModel:
 
-    def forward(self, *arg, **kwargs) -> tf.Tensor:
+    def forward(self, session: tf.Session, input_data: tf.Tensor, *arg, **kwargs) -> tf.Tensor:
         raise NotImplementedError(f"forward for not implemented for {self.__class__.__name__}")
 
     @abstractmethod

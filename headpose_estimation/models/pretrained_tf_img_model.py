@@ -43,17 +43,17 @@ class PretrainedBaseImageModel(BaseModel):
         self.filename = None
 
         self.model_info = self.create_model_info(architecture)
-        if not os.path.exists(model_path):
-            self.download_and_extract(model_path)
-        else:
+        self.maybe_download_and_extract(model_path)
+        self.model_graph, self.input_tensor, self.output_tensor = self.create_model_graph(model_path)
+
+    def maybe_download_and_extract(self, model_path: str) -> None:
+        if os.path.exists(model_path):
             logger.info("model present on disk at %s", model_path)
-
-        self.model_graph, self.bottleneck_tensor, self.resized_input_tensor = self.create_model_graph(model_path)
-
-    def download_and_extract(self, model_path: str) -> None:
-        os.makedirs(os.path.dirname(model_path), exist_ok=True)
-        downloaded_model_artifact_path = self.download(model_path)
-        self.extract(downloaded_model_artifact_path, model_path)
+        else:
+            logger.info("model not found on the the disk at %s, donwloading it now...", model_path)
+            os.makedirs(os.path.dirname(model_path), exist_ok=True)
+            downloaded_model_artifact_path = self.download(model_path)
+            self.extract(downloaded_model_artifact_path, model_path)
 
     def download(self, model_path: str) -> str:
         def _progress(count, block_size, total_size):
@@ -84,14 +84,9 @@ class PretrainedBaseImageModel(BaseModel):
         if architecture == "inception_v3":
             model_file_name = "classify_image_graph_def.pb"
             data_url = "http://download.tensorflow.org/models/image/imagenet/inception-2015-12-05.tgz"
-            resized_input_tensor_name = "Mul:0"
-            bottleneck_tensor_name = "pool_3/_reshape:0"
-            bottleneck_tensor_size = 2048
-            input_width = 299
-            input_height = 299
-            input_depth = 3
-            input_mean = 128
-            input_std = 128
+            input_tensor_name = "DecodeJpeg/contents:0"
+            output_tensor_name = "pool_3/_reshape:0"
+            output_tensor_size = 2048
 
         elif architecture.startswith("mobilenet_"):
             parts = architecture.split("_")
@@ -139,52 +134,38 @@ class PretrainedBaseImageModel(BaseModel):
 
                 model_file_name = model_name + "_frozen.pb"
                 data_url += model_name + ".tgz"
-                resized_input_tensor_name = "input:0"
-                bottleneck_tensor_name = "MobilenetV1/Predictions/Reshape:0"
-                bottleneck_tensor_size = 1001
-                input_width = int(size_string)
-                input_height = int(size_string)
-                input_depth = 3
-                input_mean = 127.5
-                input_std = 127.5
+                input_tensor_name = "input:0"
+                output_tensor_name = "MobilenetV1/Predictions/Reshape:0"
+                output_tensor_size = 1001
         else:
             raise ValueError(f"Unknown architecture: {architecture}")
 
         return {
             "data_url": data_url,
-            "bottleneck_tensor_name": bottleneck_tensor_name,
-            "bottleneck_tensor_size": bottleneck_tensor_size,
-            "input_width": input_width,
-            "input_height": input_height,
-            "resized_input_tensor_name": resized_input_tensor_name,
-            "input_depth": input_depth,
+            "input_tensor_name": input_tensor_name,
+            "output_tensor_name": output_tensor_name,
             "model_file_name": model_file_name,
-            "input_mean": input_mean,
-            "input_std": input_std,
-            "quantize_layer": is_quantized,
+            "output_tensor_size": output_tensor_size
         }
 
     def create_model_graph(self, model_dir: str):
-        if not self.model_info:
-            tf.logging.error("Did not recognize architecture flag")
-            return -1
-
         with tf.Graph().as_default() as graph:
             model_path = os.path.join(model_dir, self.model_info["model_file_name"])
             logger.info("Model path: %s", model_path)
             with gfile.FastGFile(model_path, "rb") as f_handle:
                 graph_def = tf.GraphDef()
                 graph_def.ParseFromString(f_handle.read())
-                bottleneck_tensor, resized_input_tensor = tf.import_graph_def(
+                input_tensor, output_tensor = tf.import_graph_def(
                     graph_def,
                     name="",
                     return_elements=[
-                        self.model_info["bottleneck_tensor_name"],
-                        self.model_info["resized_input_tensor_name"],
+                        self.model_info["input_tensor_name"],
+                        self.model_info["output_tensor_name"],
                     ],
                 )
 
-        return graph, bottleneck_tensor, resized_input_tensor
+        return graph, input_tensor, output_tensor
 
-    def forward(self, *arg, **kwargs) -> tf.Tensor:
-        raise NotImplementedError(f"forward method is not implemented for {self.__class__.__name__}")
+    def forward(self, session: tf.Session, input_data: tf.Tensor) -> tf.Tensor:
+        output = session.run(self.output_tensor,feed_dict={self.input_tensor: input_data})
+        return output
