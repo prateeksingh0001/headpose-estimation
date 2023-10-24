@@ -1,3 +1,15 @@
+**2023-10-24**
+
+* Updates:
+  * My suspicions are true, there was a reason for putting the reshaping nodes before the model.
+    * Mobilenet has no input reshaping nodes it only is able to take an input of the form (x, 224, 224, 3)
+    * Inception_v3 is unable to take in a batched input in the resize node, although the nodes after that can take in a batched input
+* Next steps:
+  * Create a function that add the following nodes
+    * Resize the input image batch(this operation can take in a 4D tensor as demonstrated [here](https://www.tensorflow.org/versions/r1.15/api_docs/python/tf/image/resize_images))
+    * Normalization
+    * Pass it to the first input of the graph that can take a 4D tensor.
+
 **2023-10-22**
 
 * Updates:
@@ -32,7 +44,8 @@
       2. Tensorflow testing modules
     * Can refer
       1. [tensorflow unit testing best practices](https://github.com/GoogleCloudPlatform/professional-services/tree/main/examples/tensorflow-unit-testing)
-      2. Maybe useful [How to Unit Test Deep Learning: Tests in TensorFlow, mocking and test coverage](https://theaisummer.com/unit-test-deep-learning/#:~:text=Unit%20tests%20in%20Python,-Before%20we%20see%20some%20more)
+      2. Can be usefule [Overview of ML Pipelines](https://developers.google.com/machine-learning/testing-debugging/pipeline/overview)
+      3. Maybe useful [How to Unit Test Deep Learning: Tests in TensorFlow, mocking and test coverage](https://theaisummer.com/unit-test-deep-learning/#:~:text=Unit%20tests%20in%20Python,-Before%20we%20see%20some%20more)
 
 
 **2023-10-21**
