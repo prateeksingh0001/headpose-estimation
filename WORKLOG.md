@@ -1,3 +1,21 @@
+**2023-10-28**
+
+* Updates:
+  * Successfully moved the model configs, and donwloading and extraction from `TF1ModelInference` to scripts, YAML config and their own classes.
+    * Downloading, unpacking and initializing the model is not in the purview of `TF1ModelInference` as a result these
+      operations have been moved.
+    * All the information about supported models have been moved to `[tf_models.yaml](./configs/tf_models/tf_models.yaml)`
+    * And it's downloading, unpacking and initialization can be handled by another class.
+    * The `TF1ModelInference` class only gets the path to the graphdef file, names of the input and output tensors and
+      the shape of the output tensor.
+    * Tested model downloading and extraction and it works as expected.
+  * Next steps:
+    * This concludes much of the development on the base pretrained image model.
+    * Now we only need to test the class to ensure
+      * It can take a batch of images, where the batch is specified in the model config
+      * The forward method runs as expected.
+    * Next we need to develop a model for the last layers that calculate the Yaw, pitch and roll values.
+
 **2023-10-24**
 
 * Updates:
