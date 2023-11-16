@@ -42,7 +42,7 @@ retraining image classification models.
 ### Refactoring the code
 - [ ] Formulate a refactoring strategy
   - [x] Refactor the cmdline argument parsing and passing to the main function.
-  - [ ] Class structure which reduces cross object variable access and function calling.(more modular)
+  - [x] Class structure which reduces cross object variable access and function calling (more modular)
   - [x] typing annotations
   - [ ] Unit tests for basic components, for a start (dataset parsing and bottleneck creation) 
 

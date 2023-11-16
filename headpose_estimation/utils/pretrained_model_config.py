@@ -16,17 +16,7 @@ class ModelConfig:
 
     @classmethod
     def from_dict(cls, input_config: Dict[str, Union[str, int]]) -> ModelConfig:
-        return cls(
-            architecture = input_config["architecture"],
-            graphdef_file_path = input_config["graphdef_file_path"],
-            download_url = input_config["download_url"],
-            input_node_name = input_config["input_node_name"],
-            output_node_name = input_config["output_node_name"],
-            output_tensor_size = input_config["output_tensor_size"],
-            image_input_size = tuple(input_config["image_input_size"]),
-            image_depth = input_config["image_depth"],
-            batch_size = input_config["batch_size"]
-        )
+        return cls(**input_config)
 
     def to_dict(self) -> Dict[str, Union[str, int]]:
         return {

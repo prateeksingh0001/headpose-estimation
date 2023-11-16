@@ -1,12 +1,7 @@
 from typing import Tuple, Dict, Union, Any
 
 import logging
-import os
-import sys
-import tarfile
-from pathlib import Path
 
-from six.moves import urllib
 import tensorflow as tf
 from tensorflow.python.platform import gfile
 
@@ -16,7 +11,7 @@ from headpose_estimation.models.base_model import BaseModel
 logger = logging.getLogger(__name__)
 
 
-class TF1ModelInference(BaseModel):
+class TF1ModelInference:
     """The large pretrained backbone image model class.
 
     This class will contain the backbone image model which will be used to
@@ -41,14 +36,13 @@ class TF1ModelInference(BaseModel):
         input_image_depth: int,
         session: tf.Session = None
     ):
-        self.pretrained_img_model_input_node, self.pretrained_img_model_output_node = self.create_model_graph(
-            graph_def_path, input_node_name, output_node_name
-        )
-
         self.input_node, self.resized_image_output_node = self.create_input_preparation_nodes(
             input_image_size, input_image_depth
         )
 
+        self.pretrained_img_model_input_node, self.pretrained_img_model_output_node = self.create_model_graph(
+            graph_def_path, input_node_name, output_node_name
+        )
         self.session = session
 
     @staticmethod
@@ -81,13 +75,3 @@ class TF1ModelInference(BaseModel):
         )
 
         return input_tensor, output_tensor
-
-    def forward(self, input_data: tf.Tensor) -> tf.Tensor:
-        resized_image = self.session.run(self.resized_image_output_node, feed_dict={self.input_node: input_data})
-        image_representation = self.session.run(
-            self.pretrained_img_model_output_node,
-            feed_dict={
-                self.pretrained_img_model_input_node: resized_image
-                }
-        )
-        return image_representation

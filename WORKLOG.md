@@ -4,7 +4,7 @@
   * Successfully moved the model configs, and donwloading and extraction from `TF1ModelInference` to scripts, YAML config and their own classes.
     * Downloading, unpacking and initializing the model is not in the purview of `TF1ModelInference` as a result these
       operations have been moved.
-    * All the information about supported models have been moved to `[tf_models.yaml](./configs/tf_models/tf_models.yaml)`
+    * All the information about supported models have been moved to [tf_models.yaml](./configs/tf_models/tf_models.yaml)
     * And it's downloading, unpacking and initialization can be handled by another class.
     * The `TF1ModelInference` class only gets the path to the graphdef file, names of the input and output tensors and
       the shape of the output tensor.

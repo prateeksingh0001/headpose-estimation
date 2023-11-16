@@ -1,5 +1,13 @@
+from typing import Callable
+
 import tensorflow as tf
 from tensorflow import image
+
+
+def fn_from_str(fn_module_path: str) -> Callable :
+    modulename = '.'.join(fn_module_path.split(".")[:-1])
+    fn_name = fn_module_path.split(".")[-1]
+    return getattr(modulename, fn_name)
 
 
 

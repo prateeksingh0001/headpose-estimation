@@ -43,7 +43,6 @@ class TensorflowModelHandler:
             filename=downloaded_model_filepath,
             reporthook=partial(self.__model_download_progressbar, filename=architecture)
         )
-        logger.info("\n")
 
         return downloaded_model_filepath
 
