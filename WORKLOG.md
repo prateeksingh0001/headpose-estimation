@@ -1,3 +1,12 @@
+**2024-05-05**
+
+* Updates:
+  * Came back to this project after quite some time.
+  * Could have left a better log on the next steps, coming back to this project I had to spend time and effort and understading where I left things.
+  * Given different models would have different nuances eg. Inception v3 cannot take in a batched input where as mobilenet can and the inputs to both the models need to be reshaped. It makes sense to have model specific classes that deal with the peculiarities of those individual models.
+    * To start with 2 classes one for inception and the other for mobilenet
+    * **\[Optional\]** We can later develop a factory class that looks at the model name and calls the underlying model class based on a rule based dispatch.
+
 **2023-10-28**
 
 * Updates:
