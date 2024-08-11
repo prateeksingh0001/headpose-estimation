@@ -1,4 +1,4 @@
-# Transfer-learning-for-head-pose-detection
+# Transfer learning for head pose detection
 
 This project is an twist on the [Hopenet Architecture](https://arxiv.org/pdf/1710.00925.pdf), and builds up on
 this tensorflow [example script](https://github.com/tensorflow/tensorflow/blob/v1.7.0/tensorflow/examples/image_retraining/retrain.py) for
