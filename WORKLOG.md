@@ -1,3 +1,22 @@
+**2026-05-09**
+
+* Updates:
+  * Reviewed the 3-class architecture diagram for the ongoing `model_class_refactor`:
+    * **Class 1** – Last layer(s) (trainable head: yaw, pitch, roll outputs)
+    * **Class 2** – Base model (frozen pretrained backbone)
+    * **Class 3** – Composition class; owns the image representation cache (bottlenecks) and wires 1+2 together
+  * Evaluated two design directions for Class 3:
+    * **General**: a `ModuleList`-style class that accepts an arbitrary list of model classes/callables, with generic caching at any stage. Reusable across projects.
+    * **Specific**: model wrapper (Class 1/2) stays clean, but Class 3 is project-specific and owns the bottleneck caching contract explicitly.
+  * **Decision: go specific.** Key reasons:
+    * TF1 graph-mode (static graph, `sess.run`, `feed_dict`) does not compose cleanly with arbitrary callables — a generic `ModuleList.run()` fights the framework rather than fits it.
+    * The caching/bottleneck logic (write `.npy` once per image, feed cached arrays back to the head graph across epochs) is inherently stateful and tied to this project's training loop. Generalizing it adds complexity with no payoff.
+    * New classes (`TF1ModelInference`, `EulerAnglePredictionHead`) are not yet wired into the training loop — the specific approach is the faster path to a working end-to-end refactor.
+    * The model wrapper (Class 1/2) can still be a clean, self-contained unit; only the composition layer needs to be project-specific.
+* Next steps:
+  * Wire `TF1ModelInference` and `EulerAnglePredictionHead` into the `main_setup` training loop via the new composition class (Class 3).
+  * Class 3 should own: run base model once → cache bottlenecks → loop head training N epochs against cached bottlenecks.
+
 **2024-05-05**
 
 * Updates:
