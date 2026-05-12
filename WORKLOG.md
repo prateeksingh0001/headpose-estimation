@@ -1,3 +1,10 @@
+**2026-05-11**
+
+* Updates:
+  * While refactoring I've come to realize that alot of this code contains logic specific to image classification(coming from the original 2015 code from google) and if I were to do this project again I'd just implement the complete thing from scratch. #learning
+  * I wonder if using inception and mobilenet models is a good choice of models, as these models are trained for classification and I'm not sure if their representations would be good enough for headpose estimation learning. #learning
+    * Maybe these were the best image representation models we had in 2018(back when I originally was implementing this project).
+
 **2026-05-09**
 
 * Updates:
