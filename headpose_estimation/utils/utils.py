@@ -1,6 +1,16 @@
+from typing import Callable
+
 import tensorflow as tf
 from tensorflow import image
 
+
+def fn_from_str(fn_module_path: str) -> Callable:
+    """
+    Returns a python callable from its full reference path.
+    """
+    modulename = '.'.join(fn_module_path.split(".")[:-1])
+    fn_name = fn_module_path.split(".")[-1]
+    return getattr(modulename, fn_name)
 
 
 def add_jpeg_decoding(self):

@@ -1,4 +1,137 @@
+**2026-05-11**
+
+* Updates:
+  * While refactoring I've come to realize that alot of this code contains logic specific to image classification(coming from the original 2015 code from google) and if I were to do this project again I'd just implement the complete thing from scratch. #learning
+  * I wonder if using inception and mobilenet models is a good choice of models, as these models are trained for classification and I'm not sure if their representations would be good enough for headpose estimation learning. #learning
+    * Maybe these were the best image representation models we had in 2018(back when I originally was implementing this project).
+
+**2026-05-09**
+
+* Updates:
+  * Reviewed the 3-class architecture diagram for the ongoing `model_class_refactor`:
+    * **Class 1** – Last layer(s) (trainable head: yaw, pitch, roll outputs)
+    * **Class 2** – Base model (frozen pretrained backbone)
+    * **Class 3** – Composition class; owns the image representation cache (bottlenecks) and wires 1+2 together
+  * Evaluated two design directions for Class 3:
+    * **General**: a `ModuleList`-style class that accepts an arbitrary list of model classes/callables, with generic caching at any stage. Reusable across projects.
+    * **Specific**: model wrapper (Class 1/2) stays clean, but Class 3 is project-specific and owns the bottleneck caching contract explicitly.
+  * **Decision: go specific.** Key reasons:
+    * TF1 graph-mode (static graph, `sess.run`, `feed_dict`) does not compose cleanly with arbitrary callables — a generic `ModuleList.run()` fights the framework rather than fits it.
+    * The caching/bottleneck logic (write `.npy` once per image, feed cached arrays back to the head graph across epochs) is inherently stateful and tied to this project's training loop. Generalizing it adds complexity with no payoff.
+    * New classes (`TF1ModelInference`, `EulerAnglePredictionHead`) are not yet wired into the training loop — the specific approach is the faster path to a working end-to-end refactor.
+    * The model wrapper (Class 1/2) can still be a clean, self-contained unit; only the composition layer needs to be project-specific.
+* Next steps:
+  * Wire `TF1ModelInference` and `EulerAnglePredictionHead` into the `main_setup` training loop via the new composition class (Class 3).
+  * Class 3 should own: run base model once → cache bottlenecks → loop head training N epochs against cached bottlenecks.
+
+**2024-05-05**
+
+* Updates:
+  * Came back to this project after quite some time.
+  * Could have left a better log on the next steps, coming back to this project I had to spend time and effort and understading where I left things.
+  * Given different models would have different nuances eg. Inception v3 cannot take in a batched input where as mobilenet can and the inputs to both the models need to be reshaped. It makes sense to have model specific classes that deal with the peculiarities of those individual models.
+    * To start with 2 classes one for inception and the other for mobilenet
+    * **\[Optional\]** We can later develop a factory class that looks at the model name and calls the underlying model class based on a rule based dispatch.
+
+**2023-10-28**
+
+* Updates:
+  * Successfully moved the model configs, and donwloading and extraction from `TF1ModelInference` to scripts, YAML config and their own classes.
+    * Downloading, unpacking and initializing the model is not in the purview of `TF1ModelInference` as a result these
+      operations have been moved.
+    * All the information about supported models have been moved to [tf_models.yaml](./configs/tf_models/tf_models.yaml)
+    * And it's downloading, unpacking and initialization can be handled by another class.
+    * The `TF1ModelInference` class only gets the path to the graphdef file, names of the input and output tensors and
+      the shape of the output tensor.
+    * Tested model downloading and extraction and it works as expected.
+  * Next steps:
+    * This concludes much of the development on the base pretrained image model.
+    * Now we only need to test the class to ensure
+      * It can take a batch of images, where the batch is specified in the model config
+      * The forward method runs as expected.
+    * Next we need to develop a model for the last layers that calculate the Yaw, pitch and roll values.
+
+**2023-10-24**
+
+* Updates:
+  * My suspicions are true, there was a reason for putting the reshaping nodes before the model.
+    * Mobilenet has no input reshaping nodes it only is able to take an input of the form (x, 224, 224, 3)
+    * Inception_v3 is unable to take in a batched input in the resize node, although the nodes after that can take in a batched input
+* Next steps:
+  * Create a function that add the following nodes
+    * Resize the input image batch(this operation can take in a 4D tensor as demonstrated [here](https://www.tensorflow.org/versions/r1.15/api_docs/python/tf/image/resize_images))
+    * Normalization
+    * Pass it to the first input of the graph that can take a 4D tensor.
+
+**2023-10-22**
+
+* Updates:
+  * Continued refactoring the pretrained image model class.
+    * Tested loading a model graph in tensorflow, inspecting its operations and running and testing it with sample
+      inputs. Refere to the notebook [here](./scripts/jupyter/load_read_tf_graph.ipynb) for all the steps.
+    * Based on this it turns out that I don't need the steps in the function `add_jpeg_decoding` [here](./headpose_estimation/retrain.py#L419)
+      as the jpeg decoding from the bytes and the input resizing is all handled by the inception_v3 model.
+    * There could be the case that the mobilenet model does not handle these things and in that case we need to add
+      these operations separately.
+    * Also the input normalization operations are not present in the inception_v3 model and those need to be added. But
+      they are better off being handled during the dataset preprocessing stage. Maybe need to implement something like
+      the preprocessing functions in the pytorch dataloaders. Also unlike the input normalization being done currently
+      in retrain.py, it needs to be normalized between -1 and 1.
+* Next steps:
+  * Look into the downloading and refactoring part of the class, if it can be reduced.
+  * Check the mobilenet graph for the presence of image decoding and input resizing operations
+    * If not present, we should implement them in our class and shortcircuit for the inception model.
+  * Check whether the inception_v3 model can take a stack of mulitple inputs(i.e. 4-D inputs of the shape 
+    [batch_size, input_height, input_width, channels]).
+    * If that's not possible we might want to add our own input nodes like in points above
+  * It might be a good idea to make the baseline model more general, in case we ever want to use models that are not
+    inception or mobilenet.
+    * An easy idea for this is is to have some predefined models(for now inception and mobilenet) with their details
+      like download paths, input/output tensors etc.
+    * for the rest of the models we can provide the tf graph, model name and input/output nodes that can be directly
+      passed the the sess.run(). During class instantiation
+    * we can check whether the model was a string for model name or is a tf.Graph object.
+  * Unit tests for [pretrained_tf_img_model.py](./headpose_estimation/models/pretrained_tf_img_model.py)
+    * Potential solutions
+      1. Pytest
+      2. Tensorflow testing modules
+    * Can refer
+      1. [tensorflow unit testing best practices](https://github.com/GoogleCloudPlatform/professional-services/tree/main/examples/tensorflow-unit-testing)
+      2. Can be usefule [Overview of ML Pipelines](https://developers.google.com/machine-learning/testing-debugging/pipeline/overview)
+      3. Maybe useful [How to Unit Test Deep Learning: Tests in TensorFlow, mocking and test coverage](https://theaisummer.com/unit-test-deep-learning/#:~:text=Unit%20tests%20in%20Python,-Before%20we%20see%20some%20more)
+
+
+**2023-10-21**
+
+* Updates:
+  * Refactored the pretrained base model image class, removed unused variables combined functions into one and reduced
+    information passing across functions via global variables.
+  * Loaded the inception graph into memory and investigated for inputs and outputs, was able to find them on tensorboard,
+    but I need to check with an acutal input.
+* Next steps:
+  * Check whether the input and outputs of the graph are correct, by passing an image through the model.
+  * Further refactor the class for loading the pretrained image model.
+    * Move the model_info details to a config file, which is loaded during runtime
+    * Some functions like download and extract etc. can be combined into one larger function
+      * Current implementation go between levels of abstractions (sometime is high-level code, and the other times
+        it is low-level code). Can probably solve this with proper function creation in the class.
+  * Find out what other operations are being called in the original script for instantiating the backbone model.
+    * Possibly move those functions either pretrained_tf_img_model.py or the new canddidate.
+
+
+**2023-10-18**
+
+* Updates:
+  * Moved the base(Inception) model downloading, extraction and graph creation into a separate class
+* Next steps:
+  * Update the class to be able to download and load the model from itself and be also able to load
+    the model from disk if already present
+  * Run small unit test to ensure that the system is working as expected
+  * Keep structuring the classes
+
+
 **2023-10-08**
+
 * Updates:
   * Refactored the arguments to be parsed from both a YAML file and commandline
   * Added a yaml config to running experiments
@@ -57,7 +190,7 @@
 **2023-03-10**
 
 * Unsuccessfully ran the code for the first time using a debugger, was able to debug some early issues in the code to
-  download of the base mo*del.
+  download the base model.
 * Currently the code has quite a few bugs, some of which I had to resolve as I am trying to make to code run.
 * Action plan going forward:
   1. Make the code run - this might require us to refactor/clean out a few components but let's do that.
@@ -68,7 +201,7 @@
 
 **2023-03-09**
 
-* Changed my IDE from Intellij to VSCode, much much more lighter, with  a lot more extensions, my computer has become
+* Changed my IDE from Intellij to VSCode, much much more lighter, with a lot more extensions, my computer has become
   silent again. Was able to setup debugging configurations and and a complete env for development.
 * Ran the code for the first time in this project, faced some errors, I'll come back to this and re-run it tomorrow.
 
