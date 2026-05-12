@@ -1,14 +1,13 @@
-from typing import List
-
 import csv
 import hashlib
 import os
-from pathlib import Path
 import random
 import re
 import sys
 import tarfile
 from datetime import datetime
+from pathlib import Path
+from typing import List
 
 import numpy as np
 import tensorflow as tf
@@ -19,7 +18,6 @@ from tensorflow.python.platform import gfile
 from tensorflow.python.util import compat
 
 from headpose_estimation.config import ExperimentConfig
-
 
 VAL = 2**27 + 1
 CHECKPOINT_NAME = "/tmp/_retrain_checkpoint"
@@ -690,7 +688,7 @@ def main_setup(FLAGS):
         train_writer = tf.summary.FileWriter(FLAGS.summaries_dir + "/train", sess.graph)
         validation_writer = tf.summary.FileWriter(
             FLAGS.summaries_dir + "/validation", sess.graph
-        )
+        ) = model.add_final_retrain_ops()
 
         train_saver = tf.train.Saver()
 
