@@ -63,7 +63,7 @@ class BasePretrainedBackBoneImageModel(BaseModel):
 
         input_tensor, output_tensor = tf.import_graph_def(
             graph_def,
-            return_elements=[input_node_name,output_node_name]
+            return_elements=[input_node_name, output_node_name]
         )
 
         return input_tensor, output_tensor
@@ -75,6 +75,10 @@ class BasePretrainedBackBoneImageModel(BaseModel):
             graph_def.ParseFromString(f_handle.read())
 
             return graph_def
+    
+    @property
+    def output_node(self) -> tf.Tensor:
+        return self.pretrained_img_model_output_node
 
     @abstractmethod
     def forward(self, input_data: List[bytes]) -> List[tf.Tensor]:
