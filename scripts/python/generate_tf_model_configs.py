@@ -4,15 +4,15 @@ import argparse
 from dataclasses import dataclass
 import yaml
 
-from headpose_estimation.utils.pretrained_model_config import ModelConfig
+from headpose_estimation.utils.tensorflow_model_handler import TensorflowV1ModelConfig
 
 
 
-def get_inception_v3_configs() -> List[ModelConfig]:
+def get_inception_v3_configs() -> List[TensorflowV1ModelConfig]:
     return [
-        ModelConfig(
+        TensorflowV1ModelConfig(
             architecture="inception_v3",
-            graphdef_file_path="classify_image_graph_def.pb",
+            graph_definition_path="classify_image_graph_def.pb",
             download_url="http://download.tensorflow.org/models/image/imagenet/inception-2015-12-05.tgz",
             input_node_name="DecodeJpeg/contents:0",
             output_node_name="pool_3/_reshape:0",
@@ -24,7 +24,7 @@ def get_inception_v3_configs() -> List[ModelConfig]:
     ]
 
 
-def get_mobilenet_v1_configs() -> List[ModelConfig]:
+def get_mobilenet_v1_configs() -> List[TensorflowV1ModelConfig]:
     model_versions = ["1.0", "0.75", "0.5", "0.25"]
     model_sizes = [224, 192, 160, 128]
     quantizations = [True, False]
@@ -40,9 +40,9 @@ def get_mobilenet_v1_configs() -> List[ModelConfig]:
                     model_arch_name += "_quant"
 
                 output_configs.append(
-                    ModelConfig(
+                    TensorflowV1ModelConfig(
                         architecture=model_arch_name,
-                        graphdef_file_path=f"{model_arch_name}_froze.pb",
+                        graph_definition_path=f"{model_arch_name}_froze.pb",
                         download_url=f"http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/{model_arch_name}.tgz",
                         input_node_name="input:0",
                         output_node_name="MobilenetV1/Predictions/Reshape:0",
@@ -57,20 +57,20 @@ def get_mobilenet_v1_configs() -> List[ModelConfig]:
 
 def main(cli_args: Dict[str, Any]) -> None:
 
-    config_generators: List[Callable[[], List[ModelConfig]]] = [
+    config_generators: List[Callable[[], List[TensorflowV1ModelConfig]]] = [
         get_inception_v3_configs,
         get_mobilenet_v1_configs
     ]
 
-    all_model_configurations: List[Dict[str, Union[str, int]]] = []
+    model_configurations: List[Dict[str, Union[str, int]]] = []
     for config_generator in config_generators:
         for model_config in config_generator():
             output = model_config.to_dict()
-            all_model_configurations.append(output)
+            model_configurations.append(output)
 
 
     with open(cli_args["output_path"], "w") as f:
-        yaml.dump(all_model_configurations, f, indent=2)
+        yaml.dump(model_configurations, f, indent=2)
 
 
 if __name__ == "__main__":
