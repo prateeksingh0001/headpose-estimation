@@ -1,0 +1,15 @@
+[project]
+name = "headpose-estimation"
+version = "0.1.0"
+description = "Transfer learning for headpose estimation"
+readme = "README.md"
+requires-python = "==3.7.*"
+dependencies = [
+    "numpy==1.21.6",
+    "tensorflow==1.15.0",
+]
+
+[dependency-groups]
+test = [
+    "pytest==7.4.4",
+]
