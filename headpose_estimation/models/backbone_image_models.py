@@ -13,6 +13,7 @@ class InceptionV3Model(BasePretrainedBackBoneImageModel):
 
     def forward(self, input_data: List[bytes]) -> tf.Tensor:
         output: List[tf.Tensor] = []
+
         for datapoint in input_data:
             image_representation_output = self.session.run(
                 [self.image_representation_output],
@@ -23,9 +24,10 @@ class InceptionV3Model(BasePretrainedBackBoneImageModel):
             output.append(image_representation_output)
         
         return output
-            
+
 
 class MobileNetModel(BasePretrainedBackBoneImageModel):
+
     def __init__(
         self,
         tf_model_config: TensorflowV1ModelConfig,
