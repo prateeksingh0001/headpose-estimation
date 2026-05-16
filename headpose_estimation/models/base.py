@@ -43,6 +43,8 @@ class BasePretrainedBackBoneImageModel(BaseModel):
             output_node_name=tf_model_config.output_node_name
         )
 
+        self.output_tensor_size = tf_model_config.output_tensor_size
+
         self.session = session
 
     @abstractmethod
