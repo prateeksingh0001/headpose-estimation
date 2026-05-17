@@ -2,7 +2,7 @@ from typing import List
 
 import numpy as np
 
-from headpose_estimation.models.base import PretrainedBackBoneImageModel
+from headpose_estimation.models import PretrainedBackBoneImageModel
 from headpose_estimation.utils.tensorflow_model_handler import TensorflowV1ModelConfig
 
 
@@ -11,7 +11,7 @@ class MockBackBoneModel(PretrainedBackBoneImageModel):
 
         tf_model_config = TensorflowV1ModelConfig(
             architecture="mock_backbone_model",
-            graph_definition_path="tests/headpose_estimation/models/fixtures/models/mock_model.pb",
+            graph_definition_path="tests/headpose_estimation/fixtures/models/mock_model.pb",
             download_url=None,
             input_node_name="mock_conv_model/image_input:0",
             output_node_name="output_image_representation:0",
