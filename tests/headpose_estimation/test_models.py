@@ -24,9 +24,7 @@ class TestBasePretrainedImageModel:
                 "tests/headpose_estimation/fixtures/images/AFW_134212_1_0.jpg",
                 "tests/headpose_estimation/fixtures/images/IBUG_image_011_1_2.jpg",
             ],
-            [
-                "tests/headpose_estimationtests/headpose_estimation/mock.py/fixtures/images/LFPW_image_test_0001_3.jpg"
-            ],
+            ["tests/headpose_estimation/fixtures/images/LFPW_image_test_0001_3.jpg"],
         ],
     )
     def test__preprocess_raw_images(
@@ -90,7 +88,7 @@ class TestEulerAnglesPredictionHead:
         input = np.random.uniform(size=[self.BATCH_SIZE, self.TEST_INPUT_SHAPE]).astype(
             np.float32
         )
-        output = prediction_head.forward(input_tensor=input)
+        output = prediction_head.forward(image_input_representation=input)
 
         assert isinstance(output, np.ndarray)
         assert output.shape == (self.BATCH_SIZE, self.NUM_EULER_ANGLES)
