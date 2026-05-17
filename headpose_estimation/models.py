@@ -28,7 +28,7 @@ class BaseModel(ABC):
 
 class PretrainedBackBoneImageModel(BaseModel):
     """
-    Baseclass for all the pretrained backbone image models.
+    Handles the pretrained backbone models.
     """
 
     IMAGE_NORMALIZATION_CENTER_CONTANT = 128
@@ -36,7 +36,7 @@ class PretrainedBackBoneImageModel(BaseModel):
 
     def __init__(
         self, tf_model_config: TensorflowV1ModelConfig, session: tf.Session = None
-    ):
+    ) -> None:
 
         self.model_config = tf_model_config
         self.image_preprocessing_input_node = tf.placeholder(
@@ -59,6 +59,7 @@ class PretrainedBackBoneImageModel(BaseModel):
     def _create_preprocessing_graph(
         self, raw_image_data_tensor: tf.Tensor
     ) -> tf.Tensor:
+
         image_data = expand_dims(decode_jpeg(raw_image_data_tensor, channels=3), axis=0)
         resized_image = resize_bilinear(
             images=image_data, size=self.model_config.image_input_size
@@ -112,7 +113,7 @@ class PretrainedBackBoneImageModel(BaseModel):
         return input_tensor, output_tensor
 
     @staticmethod
-    def _load(graph_def_path: Union[str, Path]):
+    def _load(graph_def_path: Union[str, Path]) -> tf.GraphDef:
         with gfile.FastGFile(graph_def_path, "rb") as f_handle:
             graph_def = tf.GraphDef()
             graph_def.ParseFromString(f_handle.read())
