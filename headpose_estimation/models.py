@@ -118,11 +118,7 @@ class PretrainedBackBoneImageModel(BaseModel):
             graph_def.ParseFromString(f_handle.read())
             return graph_def
 
-    @property
-    def output_node(self) -> tf.Tensor:
-        return self.pretrained_img_model_output_node
-
-    def forward(self, image_data: List[bytes]) -> List[tf.Tensor]:
+    def forward(self, image_data: List[str]) -> List[np.ndarray]:
         preprocessed_image_input: List[np.ndarray] = self._preprocess_raw_images(
             input_images=image_data
         )
@@ -144,6 +140,7 @@ class PretrainedBackBoneImageModel(BaseModel):
                     self.pretrained_img_model_output_node,
                     feed_dict={self.pretrained_img_model_input_node: image_input},
                 )
+                output_representation.append(image_representation)
 
         return output_representation
 
@@ -162,8 +159,8 @@ class EulerAnglesPredictionHead(BaseModel):
         self,
         input_image_representation_tensor: tf.Tensor,
         layer_sizes: List[int],
+        session: tf.Session,
         activation_function: str = "tensorflow.nn.relu",
-        session: tf.Session = None,
     ) -> None:
 
         self.input_image_representation_tensor = input_image_representation_tensor
@@ -211,11 +208,12 @@ class EulerAnglesPredictionHead(BaseModel):
 
         return previous_layer_output
 
-    def forward(self, input_tensor: np.ndarray) -> np.ndarray:
+    def forward(self, image_input_representation: np.ndarray) -> np.ndarray:
         """Predict the Euler Angles using the image representations
 
         Args:
-            input_tensor (np.ndarray): Image representations of the shape [Batch_size, image_representation_size]
+            image_input_representation (np.ndarray): Image representations of the shape
+                                                     [Batch_size, 1, image_representation_size]
 
         Returns:
             np.ndarray: Predicted Euler angles(in the order of yaw, pitch, roll) of the shape [Batch_size, 3]
@@ -226,9 +224,13 @@ class EulerAnglesPredictionHead(BaseModel):
                 self.pitch_angle_prediction,
                 self.roll_angle_prediction,
             ],
-            feed_dict={self.input_image_representation_tensor: input_tensor},
+            feed_dict={
+                self.input_image_representation_tensor: image_input_representation
+            },
         )
-
+        print(yaw_angle.shape)
+        print(pitch_angle.shape)
+        print(roll_angle.shape)
         batched_angles = np.hstack((yaw_angle, pitch_angle, roll_angle))
 
         return batched_angles
@@ -262,20 +264,26 @@ class EulerAnglesPredictionModel(BaseModel):
         super().__init__(session=session)
 
     def get_backbone_image_representation(
-        self, image_data: List[bytes]
+        self, image_data: List[str]
     ) -> List[np.ndarray]:
         return self.backbone_image_model.forward(image_data=image_data)
 
     def get_angle_predictions_from_img_representation(
         self, image_representations: np.ndarray
     ):
-        pass
+        return self.angle_prediction_head.forward(
+            image_input_representation=image_representations
+        )
 
-    def forward(self, image_data: List[bytes]) -> np.ndarray:
+    def forward(self, image_data: List[str]) -> np.ndarray:
         backbone_model_representation = self.backbone_image_model.forward(
-            input_data=image_data
+            image_data=image_data
+        )
+
+        batched_backbone_model_representations = np.vstack(
+            backbone_model_representation
         )
         output_angles = self.angle_prediction_head.forward(
-            input_tensor=backbone_model_representation
+            image_input_representation=batched_backbone_model_representations
         )
         return output_angles

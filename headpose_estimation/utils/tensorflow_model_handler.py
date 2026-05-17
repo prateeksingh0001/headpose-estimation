@@ -45,16 +45,26 @@ class TensorflowV1ModelHandler:
     - Provide information about the model, for more information check out the `TensorflowV1ModelConfig` class.
     """
 
-    def __init__(self, tf_models_config_path: str):
+    def __init__(self, tf_models_config_path: str, model_storage_path: str):
+
+        self.model_storage_path = model_storage_path
+
         with open(tf_models_config_path) as f:
             models_list: List[Dict[str, Union[str, int, Tuple[int, int]]]] = (
                 yaml.safe_load(f)
             )
 
-        self.models = {
+        self.models: List[TensorflowV1ModelConfig] = {
             model["architecture"]: TensorflowV1ModelConfig.from_dict(model)
             for model in models_list
         }
+
+        for _, config in self.models.items():
+            config.graph_definition_path = os.path.join(
+                self.model_storage_path,
+                config.architecture,
+                config.graph_definition_path,
+            )
 
     def get_model_info(self, architecture: str) -> TensorflowV1ModelConfig:
         if architecture not in self.models:
@@ -63,17 +73,18 @@ class TensorflowV1ModelHandler:
             )
         return self.models[architecture]
 
-    def get_model(self, architecture: str, output_path: str) -> Path:
-        model_folder = Path(output_path)
-        model_path = model_folder / architecture
-        if model_path.exists():
-            return model_path
+    def get_model(self, architecture: str) -> Path:
+        model_folder = Path(self.model_storage_path) / architecture
+        if model_folder.exists():
+            return model_folder
 
         logger.info("Downloading model %s", architecture)
-        downloaded_model_path = self._download_model(architecture, model_folder)
+        downloaded_model_path = self._download_model(
+            architecture, self.model_storage_path
+        )
         self._extract_model_file(downloaded_model_path, model_folder)
 
-        return model_path
+        return model_folder
 
     @staticmethod
     def __model_download_progress_bar(
@@ -88,7 +99,7 @@ class TensorflowV1ModelHandler:
     def _download_model(self, architecture: str, output_path: Path) -> Path:
         download_url = self.models[architecture].download_url
         model_tarfile = download_url.split("/")[-1]
-        downloaded_model_filepath = output_path / model_tarfile
+        downloaded_model_filepath = os.path.join(output_path, model_tarfile)
 
         request.urlretrieve(
             url=download_url,
@@ -105,6 +116,6 @@ class TensorflowV1ModelHandler:
         logger.info("Extracting %s into %s", model_path, unzip_dir)
 
         with tarfile.open(model_path, "r:gz") as tar_file:
-            tar_file.extractall(unzip_dir, filter="tar")
+            tar_file.extractall(unzip_dir)
 
         os.remove(model_path)
