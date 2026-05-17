@@ -1,16 +1,16 @@
+# For 
 - architecture: inception_v3
-  batch_size: 1
   download_url: http://download.tensorflow.org/models/image/imagenet/inception-2015-12-05.tgz
   graphdef_file_path: classify_image_graph_def.pb
   image_depth: 3
   image_input_size:
   - 229
   - 229
-  input_node_name: DecodeJpeg/contents:0
+  input_node_name: conv_1/Conv2D:0
   output_node_name: pool_3/_reshape:0
   output_tensor_size: 2048
+  supports_batching: false
 - architecture: mobilenet_v1_1.0_224_quant
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_1.0_224_quant.tgz
   graphdef_file_path: mobilenet_v1_1.0_224_quant_froze.pb
   image_depth: 3
@@ -20,8 +20,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_1.0_224
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_1.0_224.tgz
   graphdef_file_path: mobilenet_v1_1.0_224_froze.pb
   image_depth: 3
@@ -31,8 +31,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_1.0_192_quant
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_1.0_192_quant.tgz
   graphdef_file_path: mobilenet_v1_1.0_192_quant_froze.pb
   image_depth: 3
@@ -42,8 +42,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_1.0_192
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_1.0_192.tgz
   graphdef_file_path: mobilenet_v1_1.0_192_froze.pb
   image_depth: 3
@@ -53,8 +53,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_1.0_160_quant
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_1.0_160_quant.tgz
   graphdef_file_path: mobilenet_v1_1.0_160_quant_froze.pb
   image_depth: 3
@@ -64,8 +64,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_1.0_160
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_1.0_160.tgz
   graphdef_file_path: mobilenet_v1_1.0_160_froze.pb
   image_depth: 3
@@ -75,8 +75,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_1.0_128_quant
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_1.0_128_quant.tgz
   graphdef_file_path: mobilenet_v1_1.0_128_quant_froze.pb
   image_depth: 3
@@ -86,8 +86,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_1.0_128
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_1.0_128.tgz
   graphdef_file_path: mobilenet_v1_1.0_128_froze.pb
   image_depth: 3
@@ -97,8 +97,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.75_224_quant
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.75_224_quant.tgz
   graphdef_file_path: mobilenet_v1_0.75_224_quant_froze.pb
   image_depth: 3
@@ -108,8 +108,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.75_224
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.75_224.tgz
   graphdef_file_path: mobilenet_v1_0.75_224_froze.pb
   image_depth: 3
@@ -119,8 +119,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.75_192_quant
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.75_192_quant.tgz
   graphdef_file_path: mobilenet_v1_0.75_192_quant_froze.pb
   image_depth: 3
@@ -130,8 +130,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.75_192
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.75_192.tgz
   graphdef_file_path: mobilenet_v1_0.75_192_froze.pb
   image_depth: 3
@@ -141,8 +141,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.75_160_quant
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.75_160_quant.tgz
   graphdef_file_path: mobilenet_v1_0.75_160_quant_froze.pb
   image_depth: 3
@@ -152,8 +152,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.75_160
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.75_160.tgz
   graphdef_file_path: mobilenet_v1_0.75_160_froze.pb
   image_depth: 3
@@ -163,8 +163,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.75_128_quant
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.75_128_quant.tgz
   graphdef_file_path: mobilenet_v1_0.75_128_quant_froze.pb
   image_depth: 3
@@ -174,8 +174,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.75_128
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.75_128.tgz
   graphdef_file_path: mobilenet_v1_0.75_128_froze.pb
   image_depth: 3
@@ -185,8 +185,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.5_224_quant
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.5_224_quant.tgz
   graphdef_file_path: mobilenet_v1_0.5_224_quant_froze.pb
   image_depth: 3
@@ -196,8 +196,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.5_224
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.5_224.tgz
   graphdef_file_path: mobilenet_v1_0.5_224_froze.pb
   image_depth: 3
@@ -207,8 +207,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.5_192_quant
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.5_192_quant.tgz
   graphdef_file_path: mobilenet_v1_0.5_192_quant_froze.pb
   image_depth: 3
@@ -218,8 +218,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.5_192
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.5_192.tgz
   graphdef_file_path: mobilenet_v1_0.5_192_froze.pb
   image_depth: 3
@@ -229,8 +229,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.5_160_quant
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.5_160_quant.tgz
   graphdef_file_path: mobilenet_v1_0.5_160_quant_froze.pb
   image_depth: 3
@@ -240,8 +240,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.5_160
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.5_160.tgz
   graphdef_file_path: mobilenet_v1_0.5_160_froze.pb
   image_depth: 3
@@ -251,8 +251,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.5_128_quant
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.5_128_quant.tgz
   graphdef_file_path: mobilenet_v1_0.5_128_quant_froze.pb
   image_depth: 3
@@ -262,8 +262,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.5_128
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.5_128.tgz
   graphdef_file_path: mobilenet_v1_0.5_128_froze.pb
   image_depth: 3
@@ -273,8 +273,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.25_224_quant
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.25_224_quant.tgz
   graphdef_file_path: mobilenet_v1_0.25_224_quant_froze.pb
   image_depth: 3
@@ -284,8 +284,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.25_224
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.25_224.tgz
   graphdef_file_path: mobilenet_v1_0.25_224_froze.pb
   image_depth: 3
@@ -295,8 +295,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.25_192_quant
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.25_192_quant.tgz
   graphdef_file_path: mobilenet_v1_0.25_192_quant_froze.pb
   image_depth: 3
@@ -306,8 +306,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.25_192
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.25_192.tgz
   graphdef_file_path: mobilenet_v1_0.25_192_froze.pb
   image_depth: 3
@@ -317,8 +317,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.25_160_quant
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.25_160_quant.tgz
   graphdef_file_path: mobilenet_v1_0.25_160_quant_froze.pb
   image_depth: 3
@@ -328,8 +328,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.25_160
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.25_160.tgz
   graphdef_file_path: mobilenet_v1_0.25_160_froze.pb
   image_depth: 3
@@ -339,8 +339,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.25_128_quant
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.25_128_quant.tgz
   graphdef_file_path: mobilenet_v1_0.25_128_quant_froze.pb
   image_depth: 3
@@ -350,8 +350,8 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true
 - architecture: mobilenet_v1_0.25_128
-  batch_size: 0
   download_url: http://download.tensorflow.org/models/mobilenet_v1_2018_02_22/mobilenet_v1_0.25_128.tgz
   graphdef_file_path: mobilenet_v1_0.25_128_froze.pb
   image_depth: 3
@@ -361,3 +361,4 @@
   input_node_name: input:0
   output_node_name: MobilenetV1/Predictions/Reshape:0
   output_tensor_size: 1001
+  supports_batching: true

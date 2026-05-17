@@ -1,16 +1,17 @@
 from __future__ import annotations
-from dataclasses import dataclass
-import os
-from functools import partial
+
 import logging
-from pathlib import Path
+import os
 import tarfile
-from typing import List, Tuple, Dict, Union
+from dataclasses import dataclass
+from functools import partial
+from pathlib import Path
+from typing import Dict, List, Tuple, Union
 from urllib import request
+
 import yaml
 
-
-logging.basicConfig(level = logging.INFO)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -28,10 +29,12 @@ class TensorflowV1ModelConfig:
     output_tensor_size: int
     image_input_size: Tuple[int, int]
     image_depth: int
-    batch_size: int = 1
+    supports_batching: bool
 
     @classmethod
-    def from_dict(cls, input_config: Dict[str, Union[str, int]]) -> TensorflowV1ModelConfig:
+    def from_dict(
+        cls, input_config: Dict[str, Union[str, int]]
+    ) -> TensorflowV1ModelConfig:
         return cls(**input_config)
 
 
@@ -42,15 +45,15 @@ class TensorflowV1ModelHandler:
     - Provide information about the model, for more information check out the `TensorflowV1ModelConfig` class.
     """
 
-    def __init__(
-        self,
-        tf_models_config_path: str
-    ):
+    def __init__(self, tf_models_config_path: str):
         with open(tf_models_config_path) as f:
-            models_list: List[Dict[str, Union[str, int, Tuple[int, int]]]] = yaml.safe_load(f)
+            models_list: List[Dict[str, Union[str, int, Tuple[int, int]]]] = (
+                yaml.safe_load(f)
+            )
 
         self.models = {
-            model["architecture"]: TensorflowV1ModelConfig.from_dict(model) for model in models_list
+            model["architecture"]: TensorflowV1ModelConfig.from_dict(model)
+            for model in models_list
         }
 
     def get_model_info(self, architecture: str) -> TensorflowV1ModelConfig:
@@ -73,8 +76,14 @@ class TensorflowV1ModelHandler:
         return model_path
 
     @staticmethod
-    def __model_download_progress_bar(count: int, block_size: float, total_size: float, filename: str) -> None:
-        logger.info("Downloaded model %s %0.2f%%", filename, float((count*block_size*100)/total_size))
+    def __model_download_progress_bar(
+        count: int, block_size: float, total_size: float, filename: str
+    ) -> None:
+        logger.info(
+            "Downloaded model %s %0.2f%%",
+            filename,
+            float((count * block_size * 100) / total_size),
+        )
 
     def _download_model(self, architecture: str, output_path: Path) -> Path:
         download_url = self.models[architecture].download_url
@@ -84,7 +93,9 @@ class TensorflowV1ModelHandler:
         request.urlretrieve(
             url=download_url,
             filename=downloaded_model_filepath,
-            reporthook=partial(self.__model_download_progress_bar, filename=architecture)
+            reporthook=partial(
+                self.__model_download_progress_bar, filename=architecture
+            ),
         )
 
         return downloaded_model_filepath
@@ -95,5 +106,5 @@ class TensorflowV1ModelHandler:
 
         with tarfile.open(model_path, "r:gz") as tar_file:
             tar_file.extractall(unzip_dir, filter="tar")
-        
+
         os.remove(model_path)
