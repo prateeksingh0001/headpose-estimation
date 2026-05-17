@@ -1,11 +1,12 @@
 from __future__ import annotations
-from typing import List, Tuple, Dict, Union, Callable, Any
+
 import argparse
 from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Tuple, Union
+
 import yaml
 
 from headpose_estimation.utils.tensorflow_model_handler import TensorflowV1ModelConfig
-
 
 
 def get_inception_v3_configs() -> List[TensorflowV1ModelConfig]:
@@ -19,7 +20,7 @@ def get_inception_v3_configs() -> List[TensorflowV1ModelConfig]:
             output_tensor_size=2048,
             image_input_size=(229, 229),
             image_depth=3,
-            batch_size=1
+            batch_size=1,
         )
     ]
 
@@ -33,7 +34,6 @@ def get_mobilenet_v1_configs() -> List[TensorflowV1ModelConfig]:
     for model_version in model_versions:
         for model_size in model_sizes:
             for is_quantized in quantizations:
-
                 model_arch_name = f"mobilenet_v1_{model_version}_{str(model_size)}"
 
                 if is_quantized:
@@ -48,7 +48,7 @@ def get_mobilenet_v1_configs() -> List[TensorflowV1ModelConfig]:
                         output_node_name="MobilenetV1/Predictions/Reshape:0",
                         output_tensor_size=1001,
                         image_input_size=(model_size, model_size),
-                        image_depth=3
+                        image_depth=3,
                     )
                 )
 
@@ -59,7 +59,7 @@ def main(cli_args: Dict[str, Any]) -> None:
 
     config_generators: List[Callable[[], List[TensorflowV1ModelConfig]]] = [
         get_inception_v3_configs,
-        get_mobilenet_v1_configs
+        get_mobilenet_v1_configs,
     ]
 
     model_configurations: List[Dict[str, Union[str, int]]] = []
@@ -68,15 +68,15 @@ def main(cli_args: Dict[str, Any]) -> None:
             output = model_config.to_dict()
             model_configurations.append(output)
 
-
     with open(cli_args["output_path"], "w") as f:
         yaml.dump(model_configurations, f, indent=2)
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
-    parser.add_argument("-o", "--output-path", type=str, help="model configs file save path")
+    parser.add_argument(
+        "-o", "--output-path", type=str, help="model configs file save path"
+    )
     args = parser.parse_args()
 
     main(vars(args))

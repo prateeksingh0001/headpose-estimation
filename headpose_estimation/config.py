@@ -1,8 +1,9 @@
 from __future__ import annotations
-from typing import Dict, Union
 
 import argparse
 from dataclasses import dataclass
+from typing import Dict, Union
+
 import yaml
 from yaml import Loader
 
