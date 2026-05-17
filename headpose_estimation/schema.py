@@ -1,51 +1,87 @@
 from __future__ import annotations
 
 import argparse
+import json
 from dataclasses import dataclass
-from typing import Dict, Union
+from typing import Dict, List, Tuple, Union
 
 import yaml
 from yaml import Loader
 
 
 @dataclass
-class ExperimentConfig:
+class Datapoint:
+    id: str
+    image: str
+    yaw_ground_truth: float
+    pitch_ground_truth: float
+    roll_ground_truth: float
+
+
+@classmethod
+class Dataset:
+    datapoints: List[Datapoint]
+
+    @classmethod
+    def load_from_file(cls, file_path: str) -> Dataset:
+        with open(file_path) as f:
+            data = json.load(f)
+
+        dataset = [Datapoint(*datapoint) for datapoint in data]
+
+        return cls(datapoints=dataset)
+
+    def shuffle_and_train_test_split(
+        self, split_config: DataDistributionConfig
+    ) -> Tuple[Dataset, Dataset, Dataset]:
+        pass
+
+
+@dataclass
+class DataDistributionConfig:
+    train_percentage: float = 80.0
+    validation_percentage: float = 10.0
+    test_percentage: float = 10.0
+
+
+@dataclass
+class TrainingExperimentConfig:
     architecture: str
+    data_distribution_config: DataDistributionConfig
     model_dir: str
     image_dir: str
     labels_file: str
     summaries_dir: str
-    how_many_training_steps: int
-    validation_percentage: int
-    testing_percentage: int
     bottleneck_dir: str
     saved_model_dir: str
+    num_epochs: int
     output_graph: str
     intermediate_output_graph_dir: str = "/tmp/intermediate_graphs/"
     train_batch_size: int = 5
     test_batch_size: int = 5
     validation_batch_size: int = 5
     learning_rate: float = 0.01
-    final_tensor_name: str = "final_tensor_name"
     intermediate_store_frequency: int = 100
     eval_step_interval: int = 10
+    final_tensor_name: str = "final_tensor_name"
+    random_seed: int = 0
 
     @classmethod
-    def from_yaml(cls, config_path: str) -> ExperimentConfig:
+    def from_yaml(cls, config_path: str) -> TrainingExperimentConfig:
         with open(config_path) as f:
             config_dict: Dict[str, Union[str, int]] = yaml.load(f, Loader=Loader)
 
         return cls(**config_dict)
 
     @classmethod
-    def from_args(cls) -> ExperimentConfig:
+    def from_args(cls) -> TrainingExperimentConfig:
         args = cls._parse_args()
         config_path = args.pop("config_path")
 
         if config_path:
             return cls.from_yaml(config_path=config_path)
         else:
-            return ExperimentConfig(**args)
+            return TrainingExperimentConfig(**args)
 
     @staticmethod
     def _parse_args() -> Dict[str, Union[str, int]]:
@@ -83,10 +119,10 @@ class ExperimentConfig:
             help="Directory for saving the summaries",
         )
         parser.add_argument(
-            "--how_many_training_steps",
+            "--num-epoch",
             type=int,
-            dest="how_many_training_steps",
-            help="Num training steps for training the model",
+            dest="num_epochs",
+            help="Num of epochs to train the model on",
         )
         parser.add_argument(
             "--validation_percentage",
