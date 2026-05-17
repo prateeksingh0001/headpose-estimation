@@ -16,41 +16,9 @@ retraining image classification models.
 2. UPNA Headpose estimation dataset (https://www.unavarra.es/gi4e/databases/hpdb)
 3. UPNA Synthetic Head Pose Database (https://www.unavarra.es/gi4e/databases/shpdb)
 
-
-## Changelogs
-
-
-## Todo
-
-### Running the code
-- [x] **Download the datasets**
-  - present under `./data/raw`
-
-
-- [x] **Dataset extraction**
-  - [x] Extract the dataset and draw the yaw, pitch and roll axis on the images
-  - [x] Try using the roll, yaw and pitch values to draw axis on the face images
-    - [x] setup env and run a sample
-    - [x] check for the correctness of the values
-  - [x] Bring the dataset to a format which can be used by the current script
-    - [x] Check if it's needed in a certain format to create bottlenecks
-      - The images can be left as it is but the euler angles need to be put in a `\t` detlimited csv file
-      -  [x] Create the csv file from above
-    - [x] Find the script for bottlenecks
-      - Done by the retrain.py script
-
-
-- [x] **Make the code run**
-  - [x] Take the code through the debugger make changes where neccessary and get the code to a correct running state
-    - Changes done to bring the code running are logged in WORKLOG.md between dates (2023-03-10 and 2023-10-07)
-
-
-### Refactoring the code
-- [ ] Formulate a refactoring strategy
-  - [x] Refactor the cmdline argument parsing and passing to the main function.
-  - [x] Class structure which reduces cross object variable access and function calling (more modular)
-  - [x] typing annotations
-  - [ ] Unit tests for basic components, for a start (dataset parsing and bottleneck creation) 
+## Contribution Guide
+- Install the dev dependencies `uv pip install ".[dev]"`
+- Install pre-commit hooks `pre-commit install`
 
 
 #### Author: Prateek Singh
