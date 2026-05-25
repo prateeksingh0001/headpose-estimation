@@ -1,6 +1,8 @@
+import random
 from importlib import import_module
 from typing import Callable
 
+import numpy as np
 import tensorflow as tf
 
 
@@ -28,3 +30,14 @@ def add_jpeg_decoding(self):
     offset_image = tf.subtract(resized_image, self.model_info["input_mean"])
     mul_image = tf.multiply(offset_image, 1.0 / self.model_info["input_std"])
     return jpeg_data, mul_image
+
+
+def set_global_seed(seed: int) -> None:
+    """Sets a global level seed for random, numpy and tensorflow
+
+    Args:
+        seed (int): seed
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
