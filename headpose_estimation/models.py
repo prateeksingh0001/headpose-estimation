@@ -18,7 +18,9 @@ from tensorflow.image import resize_bilinear
 from tensorflow.io import decode_jpeg
 from tensorflow.layers import Dense
 from tensorflow.losses import mean_squared_error
+from tensorflow.python.framework import graph_util
 from tensorflow.python.platform import gfile
+from tensorflow.train import Optimizer
 
 from headpose_estimation.utils.tensorflow_model_handler import TensorflowV1ModelConfig
 from headpose_estimation.utils.utils import fn_from_str
@@ -247,8 +249,8 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
         self,
         input_representation_size: int,
         layer_sizes: List[int],
+        optimizer: Optimizer,
         activation_function: str = "tensorflow.nn.relu",
-        optimizer_function: str = "tf.train.AdamOptimizer",
     ) -> None:
 
         self._input_placeholder = tf.placeholder(
@@ -256,7 +258,7 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
             shape=[None, input_representation_size],
             name="input_image_representation",
         )
-        self.optimizer = optimizer_function
+        self.optimizer = optimizer
 
         activation_fn = fn_from_str(activation_function)
         yaw_angle_prediction = self.intialize_weights_for_an_angle(
@@ -375,14 +377,14 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
     def train(
         self,
         session: tf.Session,
-        input: List[np.ndarray],
+        image_representation: List[np.ndarray],
         ground_truths: Dict[Literal["yaw", "pitch", "roll"], List[float]],
     ) -> List[float]:
 
         _, total_loss, yaw_loss, roll_loss, pitch_loss = session.run(
             [*list(self.training_ops.values()), *list(self.loss_ops.values())],
             feed_dict={
-                self.input_placeholder: input,
+                self.input_placeholder: image_representation,
                 self.ground_truth_placeholders[self.YAW_ANGLE_KEY]: ground_truths[
                     self.YAW_ANGLE_KEY
                 ],
@@ -426,6 +428,17 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
             )
 
         return output
+
+    def save_as_frozen_graph(
+        self, session: tf.Session, output_graphdef_path: str
+    ) -> None:
+        output_node_names = [x.op.name for x in self.prediction_ops.values()]
+        frozen_graph_definition = graph_util.convert_variables_to_constants(
+            session, session.graph.as_graph_def(), output_node_names
+        )
+
+        with tf.io.gfile.GFile(output_graphdef_path, "wb") as f:
+            f.write(frozen_graph_definition.SerializeToString())
 
 
 class EulerAnglesPredictionModel(BaseModel[str, Dict[str, float]]):
