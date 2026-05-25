@@ -7,7 +7,6 @@ from typing import (
     Generic,
     List,
     Literal,
-    Optional,
     Tuple,
     TypeVar,
     Union,
@@ -187,14 +186,11 @@ class PretrainedBackBoneImageModel(BaseModel[str, np.ndarray]):
             return graph_def
 
     @property
-    def input_placeholder(self):
-        raise NotImplementedError(
-            f"property `input_placeholder` is not implemented for the class {self.__class__.__name__} use the "
-            "`predict` method instead."
-        )
+    def input_placeholder(self) -> None:
+        return self._input_placeholder
 
     @property
-    def prediction_ops(self):
+    def prediction_ops(self) -> Dict[str, tf.Tensor]:
         return {self.IMAGE_REPRESENTATION_KEY: self._prediction_op}
 
     def predict(
@@ -413,9 +409,10 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
         Returns:
             np.ndarray: Predicted Euler angles(in the order of yaw, pitch, roll) of the shape [Batch_size, 3]
         """
+        stacked_prediction_input = np.vstack(prediction_input)
         yaw_angle, pitch_angle, roll_angle = session.run(
             list(self.prediction_ops.values()),
-            feed_dict={self.input_placeholder: prediction_input},
+            feed_dict={self.input_placeholder: stacked_prediction_input},
         )
 
         output: List[Dict[str, float]] = []
@@ -431,54 +428,40 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
         return output
 
 
-class EulerAnglesPredictionModel(BaseModel):
+class EulerAnglesPredictionModel(BaseModel[str, Dict[str, float]]):
+    """
+    Container class for a base pretrained image backbone model and a prediction head.
+    Allows providing image data and getting the angle predictions directly from it.
+    """
+
     def __init__(
         self,
         backbone_image_model: PretrainedBackBoneImageModel,
-        session: tf.Session,
-        euler_angle_prediction_head: Optional[EulerAnglesPredictionHead] = None,
-        **kwargs,
+        euler_angle_prediction_head: EulerAnglesPredictionHead,
     ) -> None:
 
-        self.backbone_image_model = backbone_image_model
-        self.angle_prediction_head = euler_angle_prediction_head
+        self._backbone_image_model = backbone_image_model
+        self._angle_prediction_head = euler_angle_prediction_head
 
-        if not euler_angle_prediction_head:
-            euler_angle_prediction_head = EulerAnglesPredictionHead(
-                input_image_representation_tensor=tf.placeholder(
-                    tf.float32,
-                    shape=[
-                        None,
-                        self.backbone_image_model.model_config.output_tensor_size,
-                    ],
-                    name="angle_prediction_input",
-                ),
-                layer_sizes=[512, 1],
+    @property
+    def input_placeholder(self) -> tf.Tensor:
+        return self._backbone_image_model.input_placeholder
+
+    @property
+    def prediction_ops(self) -> Dict[str, tf.Tensor]:
+        return self._angle_predictin_head.prediction_ops
+
+    def predict(
+        self, session: tf.Session, prediction_input: List[str]
+    ) -> List[Dict[str, float]]:
+        backbone_model_representations: List[np.ndarray] = (
+            self._backbone_image_model.predict(
+                session=session, prediction_input=prediction_input
             )
-        self.euler_angle_prediction_head = euler_angle_prediction_head
-        super().__init__(session=session)
-
-    def get_backbone_image_representation(
-        self, image_data: List[str]
-    ) -> List[np.ndarray]:
-        return self.backbone_image_model.forward(image_data=image_data)
-
-    def get_angle_predictions_from_img_representation(
-        self, image_representations: np.ndarray
-    ):
-        return self.angle_prediction_head.forward(
-            image_input_representation=image_representations
         )
 
-    def forward(self, image_data: List[str]) -> np.ndarray:
-        backbone_model_representation = self.backbone_image_model.forward(
-            image_data=image_data
+        output_angles = self.angle_prediction_head.predict(
+            session=session, prediction_input=backbone_model_representations
         )
 
-        batched_backbone_model_representations = np.vstack(
-            backbone_model_representation
-        )
-        output_angles = self.angle_prediction_head.forward(
-            image_input_representation=batched_backbone_model_representations
-        )
         return output_angles
