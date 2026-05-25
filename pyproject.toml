@@ -16,6 +16,11 @@ dev = [
     "pre-commit>=2.21.0",
 ]
 
+preprocess = [
+    "opencv-python>=4.13.0.92",
+    "pandas>=1.1.5",
+]
+
 test = [
     "pytest==7.4.4",
 ]
