@@ -1,3 +1,5 @@
+# ruff: noqa
+
 import csv
 import hashlib
 import os
@@ -17,7 +19,7 @@ from tensorflow.python.framework import graph_util
 from tensorflow.python.platform import gfile
 from tensorflow.python.util import compat
 
-from headpose_estimation.config import ExperimentConfig
+from headpose_estimation.schema import ExperimentConfig
 
 VAL = 2**27 + 1
 CHECKPOINT_NAME = "/tmp/_retrain_checkpoint"
@@ -688,7 +690,8 @@ def main_setup(FLAGS):
         train_writer = tf.summary.FileWriter(FLAGS.summaries_dir + "/train", sess.graph)
         validation_writer = tf.summary.FileWriter(
             FLAGS.summaries_dir + "/validation", sess.graph
-        ) = model.add_final_retrain_ops()
+        )
+        model.add_final_retrain_ops()
 
         train_saver = tf.train.Saver()
 
@@ -715,10 +718,13 @@ def main_setup(FLAGS):
 
             is_last_step = i + 1 == FLAGS.how_many_training_steps
             if (i % FLAGS.eval_step_interval == 0) or is_last_step:
-                (yaw_correlation, roll_correlation, pitch_correlation), (
-                    yaw_loss,
-                    roll_loss,
-                    pitch_loss,
+                (
+                    (yaw_correlation, roll_correlation, pitch_correlation),
+                    (
+                        yaw_loss,
+                        roll_loss,
+                        pitch_loss,
+                    ),
                 ) = sess.run(
                     [streaming_correlations, mse_loss],
                     feed_dict={
