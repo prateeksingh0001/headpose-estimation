@@ -1,0 +1,5 @@
+dataset_path: data/raw
+output_path: data/processed
+datasets:
+  - dataset: Head_Pose_Database_UPNA
+    preprocessor: "headpose_estimation.dataset_preprocessors.UPNAPreprocessor"

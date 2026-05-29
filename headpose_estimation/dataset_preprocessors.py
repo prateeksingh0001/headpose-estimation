@@ -63,7 +63,7 @@ class UPNAPreprocessor:
         for username in os.listdir(self._dataset_path):
             for video_name in glob.glob("*.mp4", root_dir=Path(username)):
                 video_path = self._dataset_path / username / video_name
-                video_frame_basename = f"{username}_{video_name}"
+                video_frame_basename = f"{username}_{video_name.stem}"
 
                 ground_truth_filepath = (
                     self._dataset_path
@@ -84,7 +84,11 @@ class UPNAPreprocessor:
 
                 frame_index = 0
                 while True:
-                    _, frame = video_capture.read()
+                    ret, frame = video_capture.read()
+
+                    if not ret:
+                        break
+
                     frame_name = f"{video_frame_basename}_{frame_index}"
                     frame_image_path = self._images_path / f"{frame_name}.jpeg"
                     success = cv2.imwrite(frame_image_path, frame)
@@ -109,6 +113,7 @@ class UPNAPreprocessor:
                     frame_index += 1
 
                 video_capture.release()
+                video_capture.destroyAllWindows()
 
         with open(self._ground_truth_path, "w") as f:
             json.dump(f, ground_truth)

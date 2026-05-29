@@ -15,6 +15,10 @@ def fn_from_str(fn_module_path: str) -> Callable:
     return getattr(import_module(module_name), fn_name)
 
 
+def cls_from_str(cls_reference_path: str) -> object:
+    pass
+
+
 def add_jpeg_decoding(self):
     jpeg_data = tf.placeholder(tf.string, name="DecodeJPGInput")
     decoded_image = tf.image.decode_jpeg(
