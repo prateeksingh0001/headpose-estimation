@@ -12,13 +12,22 @@ Steps:
 """
 
 import json
+import logging
 import os
-from glob import glob
+import sys
 from pathlib import Path
 from typing import Dict, List, Union
 
 import cv2
 import pandas as pd
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setLevel(logging.INFO)
+formatter = logging.Formatter("%(name)s - %(levelname)s - %(message)s")
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
 
 
 class UPNAPreprocessor:
@@ -49,7 +58,8 @@ class UPNAPreprocessor:
         "pitch",
     ]
 
-    def __init__(self, dataset_path: str, output_path: str):
+    def __init__(self, dataset_name: str, dataset_path: str, output_path: str):
+        self._dataset_name = dataset_name
         self._dataset_path = Path(dataset_path)
         self._output_path = Path(output_path)
         self._images_path = self._output_path / "images"
@@ -57,24 +67,22 @@ class UPNAPreprocessor:
 
     def preprocess_dataset(self):
         if not os.path.exists(self._images_path):
-            os.mkdir(self._images_path)
+            self._images_path.mkdir(exist_ok=True)
 
         preprocessed_dataset: List[Dict[str, Union[str, float]]] = []
         for username in os.listdir(self._dataset_path):
-            for video_name in glob.glob("*.mp4", root_dir=Path(username)):
-                video_path = self._dataset_path / username / video_name
-                video_frame_basename = f"{username}_{video_name.stem}"
+            for video_path in (self._dataset_path / username).glob("*.mp4"):
+                logger.info(f"Processing file {video_path}")
 
                 ground_truth_filepath = (
-                    self._dataset_path
-                    / username
-                    / f"{video_path.stem}_groundtruth3D.txt"
+                    video_path.parent / f"{video_path.stem}_groundtruth3D.txt"
                 )
                 ground_truth = pd.read_csv(
                     ground_truth_filepath,
                     sep="\t",
                     header=None,
                     names=self.GROUND_TRUTH_FILE_HEADERS,
+                    index_col=False,
                 )
 
                 video_capture = cv2.VideoCapture(video_path)
@@ -89,7 +97,7 @@ class UPNAPreprocessor:
                     if not ret:
                         break
 
-                    frame_name = f"{video_frame_basename}_{frame_index}"
+                    frame_name = f"{self._dataset_name}_{video_path.stem}_{frame_index}"
                     frame_image_path = self._images_path / f"{frame_name}.jpeg"
                     success = cv2.imwrite(frame_image_path, frame)
 
@@ -113,7 +121,9 @@ class UPNAPreprocessor:
                     frame_index += 1
 
                 video_capture.release()
-                video_capture.destroyAllWindows()
+                cv2.destroyAllWindows()
 
         with open(self._ground_truth_path, "w") as f:
-            json.dump(f, ground_truth)
+            json.dump(preprocessed_dataset, f)
+
+        logger.info(f"Ground truth written at {self._ground_truth_path}")

@@ -16,6 +16,10 @@ Originally inspired by this tensorflow [example](https://github.com/tensorflow/t
 3. UPNA Synthetic Head Pose Database (https://www.unavarra.es/gi4e/databases/shpdb)
 
 
+## Data Preprocesor
+- To preprocess the data run `python scripts/python/run_dataset_preprocessing.py`
+
+
 ## Contribution Guide
 - Install the dev dependencies using `uv pip install ".[dev]"`
 - Install pre-commit hooks with `pre-commit install`

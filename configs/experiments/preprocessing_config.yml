@@ -3,3 +3,5 @@ output_path: data/processed
 datasets:
   - dataset: Head_Pose_Database_UPNA
     preprocessor: "headpose_estimation.dataset_preprocessors.UPNAPreprocessor"
+  - dataset: Synthetic_Head_Pose_Database_UPNA
+    preprocessor: "headpose_estimation.dataset_preprocessors.UPNAPreprocessor"

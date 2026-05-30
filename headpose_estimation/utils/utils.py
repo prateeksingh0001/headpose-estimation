@@ -1,6 +1,6 @@
 import random
 from importlib import import_module
-from typing import Callable
+from typing import Callable, Type
 
 import numpy as np
 import tensorflow as tf
@@ -15,8 +15,10 @@ def fn_from_str(fn_module_path: str) -> Callable:
     return getattr(import_module(module_name), fn_name)
 
 
-def cls_from_str(cls_reference_path: str) -> object:
-    pass
+def cls_from_str(cls_reference_path: str) -> Type:
+    module, klass = cls_reference_path.rsplit(".", maxsplit=1)
+    module = import_module(module)
+    return getattr(module, klass)
 
 
 def add_jpeg_decoding(self):
