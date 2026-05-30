@@ -10,14 +10,15 @@ Originally inspired by this tensorflow [example](https://github.com/tensorflow/t
 - Run the unit tests with `pytest tests`
 
 
-## Datasets
+## Running Experiments
+### Donwload the datasets
 1. 300W-LP synthesized large-pose face images (http://www.cbsr.ia.ac.cn/users/xiangyuzhu/projects/3DDFA/main.htm)
 2. UPNA Headpose estimation dataset (https://www.unavarra.es/gi4e/databases/hpdb)
 3. UPNA Synthetic Head Pose Database (https://www.unavarra.es/gi4e/databases/shpdb)
 
 
-## Data Preprocesor
-- To preprocess the data run `python scripts/python/run_dataset_preprocessing.py`
+### Data Preprocessing
+- `python scripts/python/run_dataset_preprocessing.py -c configs/experiments/preprocessing_config.yml`
 
 
 ## Contribution Guide
