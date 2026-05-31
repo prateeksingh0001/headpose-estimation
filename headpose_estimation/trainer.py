@@ -141,7 +141,7 @@ class PredictionHeadTrainer:
     @staticmethod
     def get_img_representation_and_gt_batch(
         dataset: Dataset, start_index: int, batch_size: int
-    ) -> Tuple[List[np.ndarray], Dict[str, List[float]]]:
+    ) -> Tuple[List[np.ndarray], Dict[str, np.ndarray]]:
 
         image_representations = []
         euler_angles = {"yaw": [], "pitch": [], "roll": []}
@@ -154,33 +154,71 @@ class PredictionHeadTrainer:
             euler_angles["pitch"].append(datapoint.pitch_ground_truth)
             euler_angles["roll"].append(datapoint.roll_ground_truth)
 
+        for key, val in euler_angles.items():
+            euler_angles[key] = np.array(val)
+
         return image_representations, euler_angles
 
     def calculate_validation_loss(
-        self, session: tf.compat.v1.Session, val_dataset: Dataset
-    ) -> float:
+        self,
+        session: tf.compat.v1.Session,
+        dataset: Dataset,
+        tensorboard_summary_tag_prefix: str = "",
+    ) -> Tuple[float, float, float, float, tf.Summary]:
+
         batch_size = self.experiment_config.training_config.batch_size
 
-        per_batch_val_loss = []
-        for step in range(0, len(val_dataset), batch_size):
+        squared_yaw_losses = []
+        squared_pitch_losses = []
+        squared_roll_losses = []
+        for step in range(0, len(dataset), batch_size):
             image_representations, gt_angles = self.get_img_representation_and_gt_batch(
-                dataset=val_dataset, start_index=step, batch_size=batch_size
+                dataset=dataset, start_index=step, batch_size=batch_size
             )
 
             angle_predictions = self._angle_prediction_head.predict(
                 session=session, prediction_input=image_representations
             )
 
-            per_example_loss = []
             for predicted_angles, ground_truth in zip(angle_predictions, gt_angles):
-                yaw_loss = predicted_angles["yaw"] - ground_truth["yaw"]
-                roll_loss = predicted_angles["roll"] - ground_truth["roll"]
-                pitch_loss = predicted_angles["pitch"] - ground_truth["pitch"]
-                per_example_loss.append([yaw_loss + roll_loss + pitch_loss])
+                squared_yaw_losses.append(
+                    (predicted_angles["yaw"] - ground_truth["yaw"]) ** 2
+                )
+                squared_roll_losses.append(
+                    predicted_angles["roll"] - ground_truth["roll"]
+                ) ** 2
+                squared_pitch_losses.append(
+                    predicted_angles["pitch"] - ground_truth["pitch"]
+                ) ** 2
 
-            per_batch_val_loss.append(sum(per_example_loss))
+        yaw_mse = np.mean(squared_yaw_losses)
+        roll_mse = np.mean(squared_roll_losses)
+        pitch_mse = np.mean(squared_pitch_losses)
 
-        return sum(per_batch_val_loss)
+        total_mse = np.mean([yaw_mse, roll_mse, pitch_mse])
+
+        tensorboard_val_summary = tf.Summary(
+            value=[
+                tf.Summary.Value(
+                    tag=f"{tensorboard_summary_tag_prefix}/total_loss",
+                    simple_value=total_mse,
+                ),
+                tf.Summary.Value(
+                    tag=f"{tensorboard_summary_tag_prefix}/yaw_loss",
+                    simple_value=yaw_mse,
+                ),
+                tf.Summary.Value(
+                    tag=f"{tensorboard_summary_tag_prefix}/roll_loss",
+                    simple_value=roll_mse,
+                ),
+                tf.Summary.Value(
+                    tag=f"{tensorboard_summary_tag_prefix}/pitch_loss",
+                    simple_value=pitch_mse,
+                ),
+            ]
+        )
+
+        return total_mse, yaw_mse, roll_mse, pitch_mse, tensorboard_val_summary
 
     def train(self) -> None:
         set_global_seed(self.experiment_config.seed)
@@ -216,14 +254,24 @@ class PredictionHeadTrainer:
 
             for epoch in range(num_epochs):
                 for step in range(0, len(train_dataset), batch_size):
-                    if step and (
-                        step % self.experiment_config.training_config.eval_step_interval
+                    global_step = (epoch * len(train_dataset)) + step
+
+                    if global_step and (
+                        global_step
+                        % self.experiment_config.training_config.eval_step_interval
                         == 0
                     ):
-                        val_loss = self.calculate_validation_loss(
-                            session=session, dataset=val_dataset
+                        total_val_loss, _, _, _, val_summary = (
+                            self.calculate_validation_loss(
+                                session=session,
+                                dataset=val_dataset,
+                                tensorboard_summary_tag_prefix="validation",
+                            )
                         )
-                        validation_losses.append(val_loss)
+                        validation_losses.append(total_val_loss)
+                        tensorboard_summary_writer.add_summary(
+                            val_summary, global_step=global_step
+                        )
 
                     image_representations, ground_truth = (
                         self.get_img_representation_and_gt_batch(
@@ -232,6 +280,7 @@ class PredictionHeadTrainer:
                             batch_size=batch_size,
                         )
                     )
+
                     total_loss, yaw_loss, roll_loss, pitch_loss, summary = (
                         self._angle_prediction_head.train(
                             session=session,
@@ -240,7 +289,6 @@ class PredictionHeadTrainer:
                         )
                     )
 
-                    global_step = (epoch * len(train_dataset)) + step
                     tensorboard_summary_writer.add_summary(
                         summary, global_step=global_step
                     )
@@ -253,9 +301,13 @@ class PredictionHeadTrainer:
                         f"\nGS: {global_step}, TL: {training_total_loss[-1]}, YL: {training_yaw_loss[-1]}, PL: {training_pitch_loss[-1]}, RL: {training_roll_loss[-1]}"
                     )
 
-            test_loss = self.calculate_validation_loss(
-                session=session, dataset=test_dataset
+            test_loss, _, _, _, test_summary = self.calculate_validation_loss(
+                session=session,
+                dataset=test_dataset,
+                tensorboard_summary_tag_prefix="test",
             )
+            tensorboard_summary_writer.add_summary(test_summary, global_step=0)
+            print(f"\n Test Loss: {test_loss}")
 
             self._angle_prediction_head.save_as_frozen_graph(
                 session=session, output_graphdef_path=prediction_head_save_path

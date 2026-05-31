@@ -143,11 +143,13 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
         # Summary ops for getting results on tensorboard
         self._summary_op = tf.compat.v1.summary.merge(
             [
-                tf.compat.v1.summary.scalar("learning_rate", self._learning_rate),
-                tf.compat.v1.summary.scalar("loss/total", total_loss),
-                tf.compat.v1.summary.scalar("loss/yaw", yaw_loss),
-                tf.compat.v1.summary.scalar("loss/pitch", pitch_loss),
-                tf.compat.v1.summary.scalar("loss/roll", roll_loss),
+                tf.compat.v1.summary.scalar(
+                    "training/learning_rate", self._learning_rate
+                ),
+                tf.compat.v1.summary.scalar("training/loss/total", total_loss),
+                tf.compat.v1.summary.scalar("training/loss/yaw", yaw_loss),
+                tf.compat.v1.summary.scalar("training/loss/pitch", pitch_loss),
+                tf.compat.v1.summary.scalar("training/loss/roll", roll_loss),
             ]
         )
 
