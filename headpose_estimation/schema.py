@@ -6,7 +6,7 @@ import random
 from dataclasses import dataclass, field
 from math import ceil
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import yaml
 
@@ -92,14 +92,14 @@ class PretrainedImageRepresentationModelConfig:
 
 @dataclass
 class PredictionHeadModelConfig:
-    layer_sizes: List[int]
+    layer_sizes: List[int] = field(default_factory=list)
 
 
 @dataclass
 class OptimizerConfig:
     optimizer_class: str = "tf.train.AdamOptimizer"
     learning_rate: float = "0.01"
-    optimizer_params: Dict[str, float] = field(default_factory=dict)
+    optimizer_params: Dict[str, Any] = field(default_factory=dict)
     learning_rate_decay_function: str = None
     decay_steps: int = None
     decay_rate: float = None
@@ -126,7 +126,7 @@ class ExperimentConfig:
             **config_dict["image_representation_model"]
         )
         prediction_model_config = PredictionHeadModelConfig(
-            **config_dict["prediction_head"]
+            **config_dict.get("prediction_head", {})
         )
         optimizer_config = OptimizerConfig(**config_dict["optimizer_config"])
         training_config = TrainingConfig(**config_dict["training_config"])
