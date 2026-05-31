@@ -5,11 +5,11 @@ image_representation_model:
   model_dir: "models"
 prediction_head:
   layer_sizes:
-    - 2048
-    - 1024
+    - 256
+    - 128
 optimizer_config:
   optimizer_class: tensorflow.compat.v1.train.AdamOptimizer
-  learning_rate: 0.5
+  learning_rate: 0.0001
   learning_rate_decay_function: tensorflow.compat.v1.train.exponential_decay
   decay_steps: 1000
   decay_rate: 0.95
@@ -20,7 +20,7 @@ training_config:
   test_percentage: 10.0
   run_bottleneck_generations: False
   intermediate_representations_save_dir: data/bottleneck_representations
-  num_epochs: 100
+  num_epochs: 20
   batch_size: 20
   eval_step_interval: 100
   model_save_dir: model/trained_models
