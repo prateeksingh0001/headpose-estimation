@@ -6,7 +6,6 @@ from typing import (
     Dict,
     Generic,
     List,
-    Literal,
     Tuple,
     TypeVar,
     Union,
@@ -21,6 +20,7 @@ from tensorflow.losses import mean_squared_error
 from tensorflow.python.framework import graph_util
 from tensorflow.python.platform import gfile
 from tensorflow.train import Optimizer
+from typing_extensions import Literal
 
 from headpose_estimation.utils.tensorflow_model_handler import TensorflowV1ModelConfig
 from headpose_estimation.utils.utils import fn_from_str
@@ -48,7 +48,7 @@ class BaseModel(Generic[ModelInput, PredictionOutput], ABC):
 
     @abstractmethod
     def predict(
-        self, session: tf.Session, prediction_input: List[ModelInput]
+        self, session: tf.compat.v1.Session, prediction_input: List[ModelInput]
     ) -> List[PredictionOutput]:
         pass
 
@@ -89,7 +89,7 @@ class PretrainedBackBoneImageModel(BaseModel[str, np.ndarray]):
         """
 
         self.model_config = tf_model_config
-        self._input_placeholder = tf.placeholder(
+        self._input_placeholder = tf.compat.v1.placeholder(
             tf.string, shape=[], name="input_image_bytes"
         )
         self._image_preprocessing_output_node = self._create_preprocessing_graph(
@@ -130,7 +130,7 @@ class PretrainedBackBoneImageModel(BaseModel[str, np.ndarray]):
 
     def _preprocess_raw_images(
         self,
-        session: tf.Session,
+        session: tf.compat.v1.Session,
         input_images: List[str],
     ) -> List[np.ndarray]:
         """
@@ -181,9 +181,11 @@ class PretrainedBackBoneImageModel(BaseModel[str, np.ndarray]):
         return input_tensor, output_tensor
 
     @staticmethod
-    def _load_graph_definition(graph_def_path: Union[str, Path]) -> tf.GraphDef:
+    def _load_graph_definition(
+        graph_def_path: Union[str, Path],
+    ) -> tf.compat.v1.GraphDef:
         with gfile.FastGFile(graph_def_path, "rb") as f_handle:
-            graph_def = tf.GraphDef()
+            graph_def = tf.compat.v1.GraphDef()
             graph_def.ParseFromString(f_handle.read())
             return graph_def
 
@@ -196,7 +198,7 @@ class PretrainedBackBoneImageModel(BaseModel[str, np.ndarray]):
         return {self.IMAGE_REPRESENTATION_KEY: self._prediction_op}
 
     def predict(
-        self, session: tf.Session, prediction_input: List[str]
+        self, session: tf.compat.v1.Session, prediction_input: List[str]
     ) -> List[np.ndarray]:
 
         preprocessed_image_input: List[np.ndarray] = self._preprocess_raw_images(
@@ -206,11 +208,9 @@ class PretrainedBackBoneImageModel(BaseModel[str, np.ndarray]):
         if self.model_config.supports_batching:
             batched_preprocessed_images = np.vstack(preprocessed_image_input)
             image_representation = session.run(
-                [self._image_preprocessing_output_node],
+                self.prediction_ops[self.IMAGE_REPRESENTATION_KEY],
                 feed_dict={
-                    self.prediction_ops[
-                        self.IMAGE_REPRESENTATION_KEY
-                    ]: batched_preprocessed_images
+                    self._pretrained_img_model_input_node: batched_preprocessed_images
                 },
             )
             output_representation = np.vsplit(
@@ -221,10 +221,8 @@ class PretrainedBackBoneImageModel(BaseModel[str, np.ndarray]):
             output_representation: List[np.ndarray] = []
             for image_input in preprocessed_image_input:
                 image_representation = session.run(
-                    self._image_preprocessing_output_node,
-                    feed_dict={
-                        self.prediction_ops[self.IMAGE_REPRESENTATION_KEY]: image_input
-                    },
+                    self.prediction_ops[self.IMAGE_REPRESENTATION_KEY],
+                    feed_dict={self._pretrained_img_model_input_node: image_input},
                 )
                 output_representation.append(image_representation)
 
@@ -250,15 +248,15 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
         input_representation_size: int,
         layer_sizes: List[int],
         optimizer: Optimizer,
+        global_step: tf.Variable,
         activation_function: str = "tensorflow.nn.relu",
     ) -> None:
 
-        self._input_placeholder = tf.placeholder(
+        self._input_placeholder = tf.compat.v1.placeholder(
             tf.float32,
             shape=[None, input_representation_size],
             name="input_image_representation",
         )
-        self.optimizer = optimizer
 
         activation_fn = fn_from_str(activation_function)
         yaw_angle_prediction = self.intialize_weights_for_an_angle(
@@ -288,6 +286,12 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
             self.ROLL_ANGLE_KEY: roll_angle_prediction,
         }
 
+        self.initialize_training_ops(
+            prediction_tensors=self._prediction_ops,
+            optimizer=optimizer,
+            global_step=global_step,
+        )
+
     def intialize_weights_for_an_angle(
         self,
         input_image_representation_tensor: tf.Tensor,
@@ -295,9 +299,12 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
         name: str,
         activation_function: Callable[[tf.Tensor], tf.Tensor],
     ) -> tf.Tensor:
+
         previous_layer_output = input_image_representation_tensor
         with tf.name_scope(name):
-            for _, output_size in enumerate(layer_sizes):
+            for _, output_size in enumerate(
+                [*layer_sizes, 1]
+            ):  # Append the final output angle layer
                 layer = Dense(
                     units=output_size,
                     use_bias=False,
@@ -309,15 +316,18 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
         return previous_layer_output
 
     def initialize_training_ops(
-        self, prediction_tensors: Dict[str, tf.Tensor]
+        self,
+        prediction_tensors: Dict[str, tf.Tensor],
+        optimizer: Optimizer,
+        global_step: tf.Variable,
     ) -> List[tf.Tensor]:
-        yaw_ground_truth_placeholder = tf.placeholder(
+        yaw_ground_truth_placeholder = tf.compat.v1.placeholder(
             tf.float32, shape=[None], name="input_yaw_gt"
         )
-        roll_ground_truth_placeholder = tf.placeholder(
+        roll_ground_truth_placeholder = tf.compat.v1.placeholder(
             tf.float32, shape=[None], name="input_roll_gt"
         )
-        pitch_ground_truth_placeholder = tf.placeholder(
+        pitch_ground_truth_placeholder = tf.compat.v1.placeholder(
             tf.float32, shape=[None], name="input_pitch_gt"
         )
 
@@ -328,20 +338,21 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
         }
 
         yaw_loss = mean_squared_error(
-            yaw_ground_truth_placeholder, tf.squeeze(self.yaw_angle_prediction, axis=1)
+            yaw_ground_truth_placeholder,
+            tf.squeeze(prediction_tensors[self.YAW_ANGLE_KEY], axis=1),
         )
         roll_loss = mean_squared_error(
             roll_ground_truth_placeholder,
-            tf.squeeze(self.roll_angle_prediction, axis=1),
+            tf.squeeze(prediction_tensors[self.ROLL_ANGLE_KEY], axis=1),
         )
         pitch_loss = mean_squared_error(
             pitch_ground_truth_placeholder,
-            tf.squeeze(self.pitch_angle_prediction, axis=1),
+            tf.squeeze(prediction_tensors[self.PITCH_ANGLE_KEY], axis=1),
         )
 
         total_loss = yaw_loss + roll_loss + pitch_loss
 
-        optimizer_node = self.optimizer(total_loss)
+        optimizer_node = optimizer.minimize(total_loss, global_step=global_step)
 
         self._loss_ops = {
             "total": total_loss,
@@ -376,15 +387,16 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
 
     def train(
         self,
-        session: tf.Session,
-        image_representation: List[np.ndarray],
+        session: tf.compat.v1.Session,
+        image_representations: List[np.ndarray],
         ground_truths: Dict[Literal["yaw", "pitch", "roll"], List[float]],
     ) -> List[float]:
 
+        batched_image_representations = np.vstack(image_representations)
         _, total_loss, yaw_loss, roll_loss, pitch_loss = session.run(
             [*list(self.training_ops.values()), *list(self.loss_ops.values())],
             feed_dict={
-                self.input_placeholder: image_representation,
+                self.input_placeholder: batched_image_representations,
                 self.ground_truth_placeholders[self.YAW_ANGLE_KEY]: ground_truths[
                     self.YAW_ANGLE_KEY
                 ],
@@ -400,7 +412,7 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
         return total_loss, yaw_loss, roll_loss, pitch_loss
 
     def predict(
-        self, session: tf.Session, prediction_input: List[np.ndarray]
+        self, session: tf.compat.v1.Session, prediction_input: List[np.ndarray]
     ) -> List[Dict[str, float]]:
         """Predict the Euler Angles using the image representations
 
@@ -430,7 +442,7 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
         return output
 
     def save_as_frozen_graph(
-        self, session: tf.Session, output_graphdef_path: str
+        self, session: tf.compat.v1.Session, output_graphdef_path: str
     ) -> None:
         output_node_names = [x.op.name for x in self.prediction_ops.values()]
         frozen_graph_definition = graph_util.convert_variables_to_constants(
@@ -465,7 +477,7 @@ class EulerAnglesPredictionModel(BaseModel[str, Dict[str, float]]):
         return self._angle_predictin_head.prediction_ops
 
     def predict(
-        self, session: tf.Session, prediction_input: List[str]
+        self, session: tf.compat.v1.Session, prediction_input: List[str]
     ) -> List[Dict[str, float]]:
         backbone_model_representations: List[np.ndarray] = (
             self._backbone_image_model.predict(

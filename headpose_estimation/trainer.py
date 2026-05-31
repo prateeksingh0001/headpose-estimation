@@ -3,17 +3,19 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.train import Optimizer
 
 from headpose_estimation.models import (
     EulerAnglesPredictionHead,
     PretrainedBackBoneImageModel,
 )
 from headpose_estimation.schema import Dataset, ExperimentConfig
+from headpose_estimation.utils.constants import DEFAULT_SAVE_NP_ARRAY_NAME
 from headpose_estimation.utils.tensorflow_model_handler import (
     TensorflowV1ModelConfig,
     TensorflowV1ModelHandler,
 )
-from headpose_estimation.utils.utils import set_global_seed
+from headpose_estimation.utils.utils import optimizer_factory, set_global_seed
 
 
 class PredictionHeadTrainer:
@@ -32,11 +34,18 @@ class PredictionHeadTrainer:
     def __init__(self, experiment_config: ExperimentConfig) -> None:
         self.experiment_config = experiment_config
 
+        self._setup_experiment_directories(experiment_config=experiment_config)
+
+        global_step = tf.Variable(initial_value=0, name="global_step", trainable=False)
+
+        optimizer: Optimizer = optimizer_factory(
+            self.experiment_config.optimizer_config, global_step
+        )
+
         pretrained_model_config: TensorflowV1ModelConfig = TensorflowV1ModelHandler(
-            tf_model_config_path="",
             model_storage_path=self.experiment_config.image_representation_model.model_dir,
         ).get_model_info(
-            architecture=self.experiment_config.image_representation_mdoel.architecture
+            architecture=self.experiment_config.image_representation_model.architecture
         )
 
         self._pretrained_model = PretrainedBackBoneImageModel(
@@ -46,13 +55,26 @@ class PredictionHeadTrainer:
         self._angle_prediction_head = EulerAnglesPredictionHead(
             input_representation_size=pretrained_model_config.output_tensor_size,
             layer_sizes=self.experiment_config.prediction_model_config.layer_sizes,
-            optimizer=None,
+            optimizer=optimizer,
+            global_step=global_step,
         )
+
+    def _setup_experiment_directories(
+        self, experiment_config: ExperimentConfig
+    ) -> None:
+        experiment_dir = Path(experiment_config.experiment_dir)
+        if not experiment_dir.exists():
+            experiment_dir.mkdir(exist_ok=True)
+
+        experiment_path = experiment_dir / experiment_config.experiment_name
+        if not experiment_path.exists():
+            experiment_path.mkdir(exist_ok=True)
 
     def _load_dataset(self) -> Tuple[Dataset, Dataset, Dataset]:
         dataset = Dataset.load_from_file(
             file_path=self.experiment_config.training_config.training_data_path
         )
+        dataset.datapoints = dataset.datapoints[:1000]
         train_dataset, validation_dataset, test_dataset = (
             dataset.shuffle_and_train_test_split(
                 train_percentage=self.experiment_config.training_config.train_percentage,
@@ -65,7 +87,7 @@ class PredictionHeadTrainer:
 
     def _create_intermediate_image_representations(
         self,
-        session: tf.Session,
+        session: tf.compat.v1.Session,
         train_dataset: Dataset,
         validation_dataset: Dataset,
         test_dataset: Dataset,
@@ -75,11 +97,20 @@ class PredictionHeadTrainer:
             self.experiment_config.training_config.intermediate_representations_save_dir
         )
 
+        if not image_representation_path.exists():
+            image_representation_path.mkdir(exist_ok=True)
+
         for dataset in [train_dataset, validation_dataset, test_dataset]:
             for index in range(0, len(dataset.datapoints), batch_size):
+                # current_batch_size is used to avoid indexing errors in the cases when the number of
+                # datapoints are less than than batch_size
+                current_batch_size = min(
+                    batch_size, len(dataset.datapoints[index : index + batch_size])
+                )
+
                 raw_image_data_batch = []
-                for j in range(batch_size):
-                    with tf.gfile.FastGFile(dataset.datapoints[index + j], "rb") as f:
+                for j in range(current_batch_size):
+                    with tf.gfile.FastGFile(dataset[index + j].image_path, "rb") as f:
                         raw_image_data_batch.append(f.read())
 
                 image_representations: List[np.ndarray] = (
@@ -88,14 +119,12 @@ class PredictionHeadTrainer:
                     )
                 )
 
-                for j in range(batch_size):
-                    file_name = f"{dataset.datapoints[index + j].id.split('.')[0]}.npz"
+                for j in range(current_batch_size):
+                    file_name = f"{dataset[index + j].id.split('.')[0]}.npz"
                     np.savez_compressed(
                         image_representation_path / file_name, image_representations[j]
                     )
-                    dataset.datapoints[
-                        index + j
-                    ].intermediate_representatino_path = str(
+                    dataset[index + j].intermediate_representation_path = str(
                         Path(image_representation_path) / file_name
                     )
 
@@ -108,9 +137,9 @@ class PredictionHeadTrainer:
         euler_angles = {"yaw": [], "pitch": [], "roll": []}
 
         for datapoint in dataset.datapoints[start_index : start_index + batch_size]:
-            image_representations.append(
-                np.load(datapoint.intermediate_representation_path)
-            )
+            with np.load(datapoint.intermediate_representation_path) as data:
+                image_representations.append(data[DEFAULT_SAVE_NP_ARRAY_NAME])
+
             euler_angles["yaw"].append(datapoint.yaw_ground_truth)
             euler_angles["pitch"].append(datapoint.pitch_ground_truth)
             euler_angles["roll"].append(datapoint.roll_ground_truth)
@@ -118,7 +147,7 @@ class PredictionHeadTrainer:
         return image_representations, euler_angles
 
     def calculate_validation_loss(
-        self, session: tf.Session, val_dataset: Dataset
+        self, session: tf.compat.v1.Session, val_dataset: Dataset
     ) -> float:
         batch_size = self.experiment_config.training_config.batch_size
 
@@ -144,7 +173,7 @@ class PredictionHeadTrainer:
         return sum(per_batch_val_loss)
 
     def train(self) -> None:
-        set_global_seed(self.experiment_config.random_seed)
+        set_global_seed(self.experiment_config.seed)
 
         batch_size = self.experiment_config.training_config.batch_size
         num_epochs = self.experiment_config.training_config.num_epochs
@@ -155,8 +184,8 @@ class PredictionHeadTrainer:
 
         train_dataset, val_dataset, test_dataset = self._load_dataset()
 
-        with tf.Session() as session:
-            session.run(tf.global_variable_initializer())
+        with tf.compat.v1.Session() as session:
+            session.run(tf.global_variables_initializer())
 
             self._create_intermediate_image_representations(
                 session=session,
@@ -173,7 +202,7 @@ class PredictionHeadTrainer:
 
             for epoch in range(num_epochs):
                 for step in range(0, len(train_dataset), batch_size):
-                    if (
+                    if step and (
                         step % self.experiment_config.training_config.eval_step_interval
                         == 0
                     ):
@@ -191,8 +220,8 @@ class PredictionHeadTrainer:
                     )
                     total_loss, yaw_loss, pitch_losss, roll_loss = (
                         self._angle_prediction_head.train(
-                            sesssion=session,
-                            image_representation=image_representations,
+                            session=session,
+                            image_representations=image_representations,
                             ground_truths=ground_truth,
                         )
                     )
@@ -201,10 +230,14 @@ class PredictionHeadTrainer:
                     training_yaw_loss.append(yaw_loss)
                     training_pitch_loss.append(pitch_losss)
                     training_roll_loss.append(roll_loss)
+                    print(
+                        f"\nTL: {training_total_loss[-1]}, YL: {training_yaw_loss[-1]}, PL: {training_pitch_loss[-1]}, RL: {training_roll_loss[-1]}"
+                    )
 
-            test_loss = self.calculate_validation_loss(
-                session=session, dataset=test_dataset
-            )
-            self._angle_prediction_head.save_as_frozen_graph(
-                session=session, output_graphdef_path=prediction_head_save_path
-            )
+                test_loss = self.calculate_validation_loss(
+                    session=session, dataset=test_dataset
+                )
+
+                self._angle_prediction_head.save_as_frozen_graph(
+                    session=session, output_graphdef_path=prediction_head_save_path
+                )

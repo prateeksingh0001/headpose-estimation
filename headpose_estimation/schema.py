@@ -3,12 +3,11 @@ from __future__ import annotations
 import argparse
 import json
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import ceil
 from typing import Dict, List, Tuple, Union
 
 import yaml
-from yaml import Loader
 
 
 @dataclass
@@ -21,7 +20,7 @@ class Datapoint:
     intermediate_representation_path: str = None
 
 
-@classmethod
+@dataclass
 class Dataset:
     datapoints: List[Datapoint]
 
@@ -30,7 +29,7 @@ class Dataset:
         with open(file_path) as f:
             data = json.load(f)
 
-        dataset = [Datapoint(*datapoint) for datapoint in data]
+        dataset = [Datapoint(**datapoint) for datapoint in data]
 
         return cls(datapoints=dataset)
 
@@ -47,29 +46,39 @@ class Dataset:
 
         train_dataset = Dataset(datapoints=self.datapoints[:training_data_size])
         validation_dataset = Dataset(
-            datapoints=self.datapoints[: (training_data_size + validation_data_size)]
+            datapoints=self.datapoints[
+                training_data_size : (training_data_size + validation_data_size)
+            ]
         )
         test_dataset = Dataset(
             datapoints=self.datapoints[
-                : (training_data_size + validation_data_size + test_data_size)
+                (training_data_size + validation_data_size) : (
+                    training_data_size + validation_data_size + test_data_size
+                )
             ]
         )
 
         return train_dataset, validation_dataset, test_dataset
 
+    def __len__(self) -> int:
+        return len(self.datapoints)
+
+    def __getitem__(self, index) -> Datapoint:
+        return self.datapoints[index]
+
 
 @dataclass
 class TrainingConfig:
     training_data_path: str
-    train_percentage: float = 80.0
-    validation_percentage: float = 10.0
-    test_percentage: float = 10.0
     intermediate_representations_save_dir: str
     num_epochs: int
     batch_size: int
     eval_step_interval: int
     model_save_dir: str
-    checkpoint_save_frequency: int = 100
+    checkpoint_save_frequency: int
+    train_percentage: float = 80.0
+    validation_percentage: float = 10.0
+    test_percentage: float = 10.0
 
 
 @dataclass
@@ -87,7 +96,7 @@ class PredictionHeadModelConfig:
 class OptimizerConfig:
     optimizer_class: str = "tf.train.AdamOptimizer"
     learning_rate: float = "0.01"
-    optimizer_params: Dict[str, float] = {}
+    optimizer_params: Dict[str, float] = field(default_factory=dict)
     learning_rate_decay_function: str = None
     decay_steps: int = None
     decay_rate: float = None
@@ -97,36 +106,18 @@ class OptimizerConfig:
 class ExperimentConfig:
     """ """
 
+    experiment_name: str
+    experiment_dir: str
     image_representation_model: PretrainedImageRepresentationModelConfig
     prediction_model_config: PredictionHeadModelConfig
     optimizer_config: OptimizerConfig
     training_config: TrainingConfig
-    random_seed: int
-
-    @classmethod
-    def from_dict(
-        cls, config_dict: Dict[str, Dict[str, Union[str, int, float, List[int]]]]
-    ) -> ExperimentConfig:
-        image_representation_model_details = PretrainedImageRepresentationModelConfig(
-            **config_dict["image_representation_model"]
-        )
-        prediction_model_config = PredictionHeadModelConfig(
-            **config_dict["prediction_head"]
-        )
-        optimizer_config = OptimizerConfig(**config_dict["optimizer_config"])
-        training_config = TrainingConfig(**config_dict["training_config"])
-        return ExperimentConfig(
-            image_representation_model=image_representation_model_details,
-            prediction_model_config=prediction_model_config,
-            optimizer_config=optimizer_config,
-            training_config=training_config,
-            random_seed=config_dict["random_seed"],
-        )
+    seed: int
 
     @classmethod
     def from_yaml(cls, config_path: str) -> ExperimentConfig:
         with open(config_path) as f:
-            config_dict: Dict[str, Union[str, int]] = yaml.load(f, Loader=Loader)
+            config_dict: Dict[str, Union[str, int]] = yaml.safe_load(f)
 
         image_representation_model_details = PretrainedImageRepresentationModelConfig(
             **config_dict["image_representation_model"]
@@ -136,21 +127,22 @@ class ExperimentConfig:
         )
         optimizer_config = OptimizerConfig(**config_dict["optimizer_config"])
         training_config = TrainingConfig(**config_dict["training_config"])
-        return ExperimentConfig(
+        return cls(
+            experiment_name=config_dict["experiment_name"],
+            experiment_dir=config_dict["experiment_dir"],
             image_representation_model=image_representation_model_details,
             prediction_model_config=prediction_model_config,
             optimizer_config=optimizer_config,
             training_config=training_config,
-            random_seed=config_dict["random_seed"],
+            seed=config_dict["seed"],
         )
 
     @classmethod
     def from_args(cls) -> ExperimentConfig:
         args = cls._parse_args()
-        config_path = args.pop("config_path")
 
-        if config_path:
-            return cls.from_yaml(config_path=config_path)
+        if args["config_path"]:
+            return cls.from_yaml(config_path=args["config_path"])
         else:
             image_representation_model_details = (
                 PretrainedImageRepresentationModelConfig(
@@ -190,12 +182,15 @@ class ExperimentConfig:
                 model_save_dir=args["model_save_dir"],
                 checkpoint_save_frequency=args["checkpoint_save_frequency"],
             )
+
             return cls(
+                experiment_name=args["experiment_name"],
+                experiment_dir=args["experiment_dir"],
                 image_representation_model_details=image_representation_model_details,
                 prediction_model_config=prediction_model_config,
                 optimizer_config=optimizer_config,
                 training_config=training_config,
-                random_seed=args["random_seed"],
+                seed=args["seed"],
             )
 
     @staticmethod
@@ -204,6 +199,20 @@ class ExperimentConfig:
 
         # Config files
         parser.add_argument("-c", "--config-path", type=str)
+
+        # Experiment name
+        parser.add_argument(
+            "--experiment-name",
+            type=str,
+            dest="experiment_name",
+            help="Name of the current experiment",
+        )
+        parser.add_argument(
+            "--experiment-dir",
+            type=str,
+            dest="experiment_dir",
+            help="Name of the experiment directory",
+        )
 
         # Pretrained Image backbone params
         parser.add_argument(
@@ -329,9 +338,9 @@ class ExperimentConfig:
 
         # random seed
         parser.add_argument(
-            "--random-seed",
+            "--seed",
             type=int,
-            dest="random_seed",
+            dest="seed",
             default=100,
             help="Seed to be used for any random number invocations for example weight initialization, dataset"
             " shuffling etc.",

@@ -6,10 +6,12 @@ import tarfile
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 from urllib import request
 
 import yaml
+
+from headpose_estimation.utils.constants import TF_MODELS_CONFIG_PATH
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -45,7 +47,11 @@ class TensorflowV1ModelHandler:
     - Provide information about the model, for more information check out the `TensorflowV1ModelConfig` class.
     """
 
-    def __init__(self, tf_models_config_path: str, model_storage_path: str):
+    def __init__(
+        self,
+        model_storage_path: str,
+        tf_models_config_path: Optional[str] = TF_MODELS_CONFIG_PATH,
+    ):
 
         self.model_storage_path = model_storage_path
 

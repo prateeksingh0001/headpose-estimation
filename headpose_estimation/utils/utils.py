@@ -4,6 +4,9 @@ from typing import Callable, Type
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.train import Optimizer
+
+from headpose_estimation.schema import OptimizerConfig
 
 
 def fn_from_str(fn_module_path: str) -> Callable:
@@ -19,6 +22,33 @@ def cls_from_str(cls_reference_path: str) -> Type:
     module, klass = cls_reference_path.rsplit(".", maxsplit=1)
     module = import_module(module)
     return getattr(module, klass)
+
+
+def optimizer_factory(
+    optimizer_config: OptimizerConfig, global_step=tf.Variable
+) -> Optimizer:
+
+    lr_decay = None
+    if optimizer_config.learning_rate_decay_function:
+        lr_decay_fn = fn_from_str(optimizer_config.learning_rate_decay_function)
+        lr_decay_params = {
+            "learning_rate": optimizer_config.learning_rate,
+            "global_step": global_step,
+            "decay_steps": optimizer_config.decay_steps,
+            "decay_rate": optimizer_config.decay_rate,
+        }
+        lr_decay = lr_decay_fn(**lr_decay_params)
+
+    optimizer_class = cls_from_str(cls_reference_path=optimizer_config.optimizer_class)
+    optimizer_params = {
+        "learning_rate": lr_decay
+        if lr_decay is not None
+        else optimizer_config.learning_rate,
+        **optimizer_config.optimizer_params,
+    }
+    optimizer = optimizer_class(**optimizer_params)
+
+    return optimizer
 
 
 def add_jpeg_decoding(self):
@@ -46,4 +76,4 @@ def set_global_seed(seed: int) -> None:
     """
     random.seed(seed)
     np.random.seed(seed)
-    tf.random.set_seed(seed)
+    tf.compat.v1.set_random_seed(seed)
