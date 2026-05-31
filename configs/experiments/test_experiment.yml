@@ -1,11 +1,26 @@
-architecture: "inception_v3"
-model_dir: "models/"
-image_dir: "data/subsampled_raw/300W-LP/300W_LP/"
-labels_file: "data/ground_truths.csv"
-summaries_dir: "summaries/"
-how_many_training_steps: 100
-validation_percentage: 10
-testing_percentage: 10
-bottleneck_dir: "bottlenecks/"
-saved_model_dir: "models/"
-output_graph: "models/output_retrained_graph.pb"
+experiment_name: test_experiment_1
+experiment_dir: experiments
+image_representation_model:
+  architecture: "inception_v3"
+  model_dir: "models"
+prediction_head:
+  layer_sizes:
+    - 1024
+optimizer_config:
+  optimizer_class: tensorflow.compat.v1.train.AdamOptimizer
+  learning_rate: 0.01
+  learning_rate_decay_function: tensorflow.compat.v1.train.exponential_decay
+  decay_steps: 50
+  decay_rate: 0.9
+training_config:
+  training_data_path: data/processed/preprocessed_ground_truth.json
+  train_percentage: 80.0
+  validation_percentage: 10.0
+  test_percentage: 10.0
+  intermediate_representations_save_dir: data/bottleneck_representations
+  num_epochs: 10
+  batch_size: 20
+  eval_step_interval: 100
+  model_save_dir: model/trained_models
+  checkpoint_save_frequency: 10
+seed: 100
