@@ -80,28 +80,19 @@ class PredictionHeadTrainer:
                 parents=True, exist_ok=True
             )
 
-    def _load_dataset(self) -> Tuple[Dataset, Dataset, Dataset]:
+    def _load_dataset(self) -> Dataset:
         dataset = Dataset.load_from_file(
             file_path=self.experiment_config.training_config.training_data_path
         )
         dataset.datapoints = dataset.datapoints[:1000]
-        train_dataset, validation_dataset, test_dataset = (
-            dataset.shuffle_and_train_test_split(
-                train_percentage=self.experiment_config.training_config.train_percentage,
-                validation_percentage=self.experiment_config.training_config.validation_percentage,
-                test_percentage=self.experiment_config.training_config.test_percentage,
-            )
-        )
 
-        return train_dataset, validation_dataset, test_dataset
+        return dataset
 
     def _create_intermediate_image_representations(
         self,
         session: tf.compat.v1.Session,
-        train_dataset: Dataset,
-        validation_dataset: Dataset,
-        test_dataset: Dataset,
-    ) -> None:
+        dataset: Dataset,
+    ) -> Dataset:
         batch_size = self.experiment_config.training_config.batch_size
         image_representation_path = Path(
             self.experiment_config.training_config.intermediate_representations_save_dir
@@ -110,33 +101,32 @@ class PredictionHeadTrainer:
         if not image_representation_path.exists():
             image_representation_path.mkdir(exist_ok=True)
 
-        for dataset in [train_dataset, validation_dataset, test_dataset]:
-            for index in range(0, len(dataset.datapoints), batch_size):
-                # current_batch_size is used to avoid indexing errors in the cases when the number of
-                # datapoints are less than than batch_size
-                current_batch_size = min(
-                    batch_size, len(dataset.datapoints[index : index + batch_size])
+        for index in range(0, len(dataset.datapoints), batch_size):
+            # current_batch_size is used to avoid indexing errors in the cases when the number of
+            # datapoints are less than than batch_size
+            current_batch_size = min(
+                batch_size, len(dataset.datapoints[index : index + batch_size])
+            )
+
+            raw_image_data_batch = []
+            for j in range(current_batch_size):
+                with tf.gfile.FastGFile(dataset[index + j].image_path, "rb") as f:
+                    raw_image_data_batch.append(f.read())
+
+            image_representations: List[np.ndarray] = self._pretrained_model.predict(
+                session=session, prediction_input=raw_image_data_batch
+            )
+
+            for j in range(current_batch_size):
+                file_name = f"{dataset[index + j].id.split('.')[0]}.npz"
+                np.savez_compressed(
+                    image_representation_path / file_name, image_representations[j]
+                )
+                dataset[index + j].intermediate_representation_path = str(
+                    Path(image_representation_path) / file_name
                 )
 
-                raw_image_data_batch = []
-                for j in range(current_batch_size):
-                    with tf.gfile.FastGFile(dataset[index + j].image_path, "rb") as f:
-                        raw_image_data_batch.append(f.read())
-
-                image_representations: List[np.ndarray] = (
-                    self._pretrained_model.predict(
-                        session=session, prediction_input=raw_image_data_batch
-                    )
-                )
-
-                for j in range(current_batch_size):
-                    file_name = f"{dataset[index + j].id.split('.')[0]}.npz"
-                    np.savez_compressed(
-                        image_representation_path / file_name, image_representations[j]
-                    )
-                    dataset[index + j].intermediate_representation_path = str(
-                        Path(image_representation_path) / file_name
-                    )
+        return dataset
 
     @staticmethod
     def get_img_representation_and_gt_batch(
@@ -180,16 +170,15 @@ class PredictionHeadTrainer:
                 session=session, prediction_input=image_representations
             )
 
-            for predicted_angles, ground_truth in zip(angle_predictions, gt_angles):
-                squared_yaw_losses.append(
-                    (predicted_angles["yaw"] - ground_truth["yaw"]) ** 2
-                )
-                squared_roll_losses.append(
-                    predicted_angles["roll"] - ground_truth["roll"]
-                ) ** 2
-                squared_pitch_losses.append(
-                    predicted_angles["pitch"] - ground_truth["pitch"]
-                ) ** 2
+            for predicted_angles, yaw_gt, roll_gt, pitch_gt in zip(
+                angle_predictions,
+                gt_angles["yaw"],
+                gt_angles["roll"],
+                gt_angles["pitch"],
+            ):
+                squared_yaw_losses.append((predicted_angles["yaw"] - yaw_gt) ** 2)
+                squared_roll_losses.append((predicted_angles["roll"] - roll_gt) ** 2)
+                squared_pitch_losses.append((predicted_angles["pitch"] - pitch_gt) ** 2)
 
         yaw_mse = np.mean(squared_yaw_losses)
         roll_mse = np.mean(squared_roll_losses)
@@ -230,20 +219,29 @@ class PredictionHeadTrainer:
             / DEFAULT_PREDICTION_HEAD_FROZEN_GRAPH_NAME
         )
 
-        train_dataset, val_dataset, test_dataset = self._load_dataset()
+        dataset = self._load_dataset()
 
         with tf.compat.v1.Session() as session:
+            if self.experiment_config.training_config.run_bottleneck_generations:
+                dataset: Dataset = self._create_intermediate_image_representations(
+                    session=session, dataset=dataset
+                )
+                dataset.save(
+                    save_path=self.experiment_config.training_config.training_data_path
+                )
+
+            train_dataset, val_dataset, test_dataset = (
+                dataset.shuffle_and_train_test_split(
+                    train_percentage=self.experiment_config.training_config.train_percentage,
+                    validation_percentage=self.experiment_config.training_config.validation_percentage,
+                    test_percentage=self.experiment_config.training_config.test_percentage,
+                )
+            )
+
             session.run(tf.global_variables_initializer())
 
             tensorboard_summary_writer = tf.summary.FileWriter(
                 logdir=self.experiment_config.tensorboard_log_dir, graph=session.graph
-            )
-
-            self._create_intermediate_image_representations(
-                session=session,
-                train_dataset=train_dataset,
-                validation_dataset=val_dataset,
-                test_dataset=test_dataset,
             )
 
             training_total_loss = []

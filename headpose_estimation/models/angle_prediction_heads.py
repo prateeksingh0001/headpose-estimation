@@ -89,8 +89,8 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
         previous_layer_output = input_image_representation_tensor
         with tf.name_scope(name):
             for _, output_size in enumerate(
-                [*layer_sizes, 1]
-            ):  # Append the final output angle layer
+                [*layer_sizes, 1]  # Appends 1 as the final output angle layer
+            ):
                 layer = Dense(
                     units=output_size,
                     use_bias=False,
@@ -233,7 +233,7 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
         )
 
         output: List[Dict[str, float]] = []
-        for i in len(prediction_input):
+        for i in range(len(prediction_input)):
             output.append(
                 {
                     self.YAW_ANGLE_KEY: yaw_angle[i][0],

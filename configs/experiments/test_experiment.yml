@@ -18,6 +18,7 @@ training_config:
   train_percentage: 80.0
   validation_percentage: 10.0
   test_percentage: 10.0
+  run_bottleneck_generations: False
   intermediate_representations_save_dir: data/bottleneck_representations
   num_epochs: 100
   batch_size: 20

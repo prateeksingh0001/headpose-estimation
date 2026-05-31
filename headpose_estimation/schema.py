@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from math import ceil
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
@@ -63,6 +63,11 @@ class Dataset:
 
         return train_dataset, validation_dataset, test_dataset
 
+    def save(self, save_path: Union[str, Path]) -> None:
+        output = [asdict(datapoint) for datapoint in self.datapoints]
+        with open(save_path, "w") as f:
+            json.dump(output, f)
+
     def __len__(self) -> int:
         return len(self.datapoints)
 
@@ -79,6 +84,7 @@ class TrainingConfig:
     eval_step_interval: int
     model_save_dir: str
     checkpoint_save_frequency: int
+    run_bottleneck_generations: bool = True
     train_percentage: float = 80.0
     validation_percentage: float = 10.0
     test_percentage: float = 10.0
@@ -179,6 +185,7 @@ class ExperimentConfig:
                 intermediate_representations_save_dir=args[
                     "intermediate_representation_save_dir"
                 ],
+                run_bottleneck_generations=args["run_bottleneck_generations"],
                 num_epochs=args["num_epochs"],
                 batch_size=args["batch_size"],
                 eval_step_interval=args["eval_step_interval"],
@@ -312,6 +319,12 @@ class ExperimentConfig:
             type=str,
             dest="intermediate_represenation_save_dir",
             help="Directory to store the intermediate representations created by the pretrained backbone image model",
+        )
+        parser.add_argument(
+            "--no-bottleneck-generation",
+            action="store_false",
+            dest="run_bottleneck_generations",
+            help="If this flag is set then bottleneck generation step is omitted",
         )
         parser.add_argument(
             "--num-epochs",
