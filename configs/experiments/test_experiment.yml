@@ -1,4 +1,4 @@
-experiment_name: test_experiment_1
+experiment_name: test_experiment_2
 experiment_root: experiments
 image_representation_model:
   architecture: "inception_v3"
@@ -18,7 +18,6 @@ training_config:
   train_percentage: 80.0
   validation_percentage: 10.0
   test_percentage: 10.0
-  run_bottleneck_generations: False
   intermediate_representations_save_dir: data/bottleneck_representations
   num_epochs: 20
   batch_size: 20
