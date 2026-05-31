@@ -5,8 +5,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.train import Optimizer
 
-from headpose_estimation.models import (
-    EulerAnglesPredictionHead,
+from headpose_estimation.models.angle_prediction_heads import EulerAnglesPredictionHead
+from headpose_estimation.models.pretrained_image_model import (
     PretrainedBackBoneImageModel,
 )
 from headpose_estimation.schema import Dataset, ExperimentConfig
@@ -74,7 +74,7 @@ class PredictionHeadTrainer:
         dataset = Dataset.load_from_file(
             file_path=self.experiment_config.training_config.training_data_path
         )
-        dataset.datapoints = dataset.datapoints[:1000]
+        dataset.datapoints = dataset.datapoints[:100]
         train_dataset, validation_dataset, test_dataset = (
             dataset.shuffle_and_train_test_split(
                 train_percentage=self.experiment_config.training_config.train_percentage,
@@ -234,10 +234,10 @@ class PredictionHeadTrainer:
                         f"\nTL: {training_total_loss[-1]}, YL: {training_yaw_loss[-1]}, PL: {training_pitch_loss[-1]}, RL: {training_roll_loss[-1]}"
                     )
 
-                test_loss = self.calculate_validation_loss(
-                    session=session, dataset=test_dataset
-                )
+            test_loss = self.calculate_validation_loss(
+                session=session, dataset=test_dataset
+            )
 
-                self._angle_prediction_head.save_as_frozen_graph(
-                    session=session, output_graphdef_path=prediction_head_save_path
-                )
+            self._angle_prediction_head.save_as_frozen_graph(
+                session=session, output_graphdef_path=prediction_head_save_path
+            )
