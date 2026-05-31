@@ -31,6 +31,7 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
         input_representation_size: int,
         layer_sizes: List[int],
         optimizer: Optimizer,
+        learning_rate_tensor: tf.Tensor,
         global_step: tf.Variable,
         activation_function: str = "tensorflow.nn.relu",
     ) -> None:
@@ -68,6 +69,8 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
             self.PITCH_ANGLE_KEY: pitch_angle_prediction,
             self.ROLL_ANGLE_KEY: roll_angle_prediction,
         }
+
+        self._learning_rate = learning_rate_tensor
 
         self.initialize_training_ops(
             prediction_tensors=self._prediction_ops,
@@ -137,6 +140,17 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
 
         optimizer_node = optimizer.minimize(total_loss, global_step=global_step)
 
+        # Summary ops for getting results on tensorboard
+        self._summary_op = tf.compat.v1.summary.merge(
+            [
+                tf.compat.v1.summary.scalar("learning_rate", self._learning_rate),
+                tf.compat.v1.summary.scalar("loss/total", total_loss),
+                tf.compat.v1.summary.scalar("loss/yaw", yaw_loss),
+                tf.compat.v1.summary.scalar("loss/pitch", pitch_loss),
+                tf.compat.v1.summary.scalar("loss/roll", roll_loss),
+            ]
+        )
+
         self._loss_ops = {
             "total": total_loss,
             self.YAW_ANGLE_KEY: yaw_loss,
@@ -176,8 +190,12 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
     ) -> List[float]:
 
         batched_image_representations = np.vstack(image_representations)
-        _, total_loss, yaw_loss, roll_loss, pitch_loss = session.run(
-            [*list(self.training_ops.values()), *list(self.loss_ops.values())],
+        _, total_loss, yaw_loss, roll_loss, pitch_loss, summary = session.run(
+            [
+                *list(self.training_ops.values()),
+                *list(self.loss_ops.values()),
+                self._summary_op,
+            ],
             feed_dict={
                 self.input_placeholder: batched_image_representations,
                 self.ground_truth_placeholders[self.YAW_ANGLE_KEY]: ground_truths[
@@ -192,7 +210,7 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
             },
         )
 
-        return total_loss, yaw_loss, roll_loss, pitch_loss
+        return total_loss, yaw_loss, roll_loss, pitch_loss, summary
 
     def predict(
         self, session: tf.compat.v1.Session, prediction_input: List[np.ndarray]

@@ -3,14 +3,16 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.train import Optimizer
 
 from headpose_estimation.models.angle_prediction_heads import EulerAnglesPredictionHead
 from headpose_estimation.models.pretrained_image_model import (
     PretrainedBackBoneImageModel,
 )
 from headpose_estimation.schema import Dataset, ExperimentConfig
-from headpose_estimation.utils.constants import DEFAULT_SAVE_NP_ARRAY_NAME
+from headpose_estimation.utils.constants import (
+    DEFAULT_PREDICTION_HEAD_FROZEN_GRAPH_NAME,
+    DEFAULT_SAVE_NP_ARRAY_NAME,
+)
 from headpose_estimation.utils.tensorflow_model_handler import (
     TensorflowV1ModelConfig,
     TensorflowV1ModelHandler,
@@ -38,7 +40,7 @@ class PredictionHeadTrainer:
 
         global_step = tf.Variable(initial_value=0, name="global_step", trainable=False)
 
-        optimizer: Optimizer = optimizer_factory(
+        optimizer, learning_rate = optimizer_factory(
             self.experiment_config.optimizer_config, global_step
         )
 
@@ -56,25 +58,33 @@ class PredictionHeadTrainer:
             input_representation_size=pretrained_model_config.output_tensor_size,
             layer_sizes=self.experiment_config.prediction_model_config.layer_sizes,
             optimizer=optimizer,
+            learning_rate_tensor=learning_rate,
             global_step=global_step,
         )
 
     def _setup_experiment_directories(
         self, experiment_config: ExperimentConfig
     ) -> None:
-        experiment_dir = Path(experiment_config.experiment_dir)
-        if not experiment_dir.exists():
-            experiment_dir.mkdir(exist_ok=True)
+        experiment_root = Path(experiment_config.experiment_root)
+        if not experiment_root.exists():
+            experiment_root.mkdir(exist_ok=True)
 
-        experiment_path = experiment_dir / experiment_config.experiment_name
-        if not experiment_path.exists():
-            experiment_path.mkdir(exist_ok=True)
+        if not experiment_config.experiment_directory.exists():
+            experiment_config.experiment_directory.mkdir(parents=True, exist_ok=True)
+
+        if not experiment_config.tensorboard_log_dir.exists():
+            experiment_config.tensorboard_log_dir.mkdir(parents=True, exist_ok=True)
+
+        if not Path(experiment_config.training_config.model_save_dir).exists():
+            Path(experiment_config.training_config.model_save_dir).mkdir(
+                parents=True, exist_ok=True
+            )
 
     def _load_dataset(self) -> Tuple[Dataset, Dataset, Dataset]:
         dataset = Dataset.load_from_file(
             file_path=self.experiment_config.training_config.training_data_path
         )
-        dataset.datapoints = dataset.datapoints[:100]
+        dataset.datapoints = dataset.datapoints[:1000]
         train_dataset, validation_dataset, test_dataset = (
             dataset.shuffle_and_train_test_split(
                 train_percentage=self.experiment_config.training_config.train_percentage,
@@ -179,13 +189,17 @@ class PredictionHeadTrainer:
         num_epochs = self.experiment_config.training_config.num_epochs
         prediction_head_save_path = str(
             Path(self.experiment_config.training_config.model_save_dir)
-            / "prediction_head.pb"
+            / DEFAULT_PREDICTION_HEAD_FROZEN_GRAPH_NAME
         )
 
         train_dataset, val_dataset, test_dataset = self._load_dataset()
 
         with tf.compat.v1.Session() as session:
             session.run(tf.global_variables_initializer())
+
+            tensorboard_summary_writer = tf.summary.FileWriter(
+                logdir=self.experiment_config.tensorboard_log_dir, graph=session.graph
+            )
 
             self._create_intermediate_image_representations(
                 session=session,
@@ -218,7 +232,7 @@ class PredictionHeadTrainer:
                             batch_size=batch_size,
                         )
                     )
-                    total_loss, yaw_loss, pitch_losss, roll_loss = (
+                    total_loss, yaw_loss, roll_loss, pitch_loss, summary = (
                         self._angle_prediction_head.train(
                             session=session,
                             image_representations=image_representations,
@@ -226,12 +240,17 @@ class PredictionHeadTrainer:
                         )
                     )
 
+                    global_step = (epoch * len(train_dataset)) + step
+                    tensorboard_summary_writer.add_summary(
+                        summary, global_step=global_step
+                    )
+
                     training_total_loss.append(total_loss)
                     training_yaw_loss.append(yaw_loss)
-                    training_pitch_loss.append(pitch_losss)
+                    training_pitch_loss.append(pitch_loss)
                     training_roll_loss.append(roll_loss)
                     print(
-                        f"\nTL: {training_total_loss[-1]}, YL: {training_yaw_loss[-1]}, PL: {training_pitch_loss[-1]}, RL: {training_roll_loss[-1]}"
+                        f"\nGS: {global_step}, TL: {training_total_loss[-1]}, YL: {training_yaw_loss[-1]}, PL: {training_pitch_loss[-1]}, RL: {training_roll_loss[-1]}"
                     )
 
             test_loss = self.calculate_validation_loss(

@@ -1,6 +1,6 @@
 import random
 from importlib import import_module
-from typing import Callable, Type
+from typing import Callable, Tuple, Type
 
 import numpy as np
 import tensorflow as tf
@@ -26,7 +26,7 @@ def cls_from_str(cls_reference_path: str) -> Type:
 
 def optimizer_factory(
     optimizer_config: OptimizerConfig, global_step=tf.Variable
-) -> Optimizer:
+) -> Tuple[Optimizer, tf.Tensor]:
 
     lr_decay = None
     if optimizer_config.learning_rate_decay_function:
@@ -36,6 +36,7 @@ def optimizer_factory(
             "global_step": global_step,
             "decay_steps": optimizer_config.decay_steps,
             "decay_rate": optimizer_config.decay_rate,
+            "name": "learning_rate",
         }
         lr_decay = lr_decay_fn(**lr_decay_params)
 
@@ -48,7 +49,10 @@ def optimizer_factory(
     }
     optimizer = optimizer_class(**optimizer_params)
 
-    return optimizer
+    if lr_decay is None:
+        lr_decay = tf.constant(optimizer_config.learning_rate, name="learning_rate")
+
+    return optimizer, lr_decay
 
 
 def add_jpeg_decoding(self):

@@ -5,9 +5,12 @@ import json
 import random
 from dataclasses import dataclass, field
 from math import ceil
+from pathlib import Path
 from typing import Dict, List, Tuple, Union
 
 import yaml
+
+from headpose_estimation.utils.constants import TENSORBOARD_DIR_NAME
 
 
 @dataclass
@@ -107,7 +110,7 @@ class ExperimentConfig:
     """ """
 
     experiment_name: str
-    experiment_dir: str
+    experiment_root: str
     image_representation_model: PretrainedImageRepresentationModelConfig
     prediction_model_config: PredictionHeadModelConfig
     optimizer_config: OptimizerConfig
@@ -129,7 +132,7 @@ class ExperimentConfig:
         training_config = TrainingConfig(**config_dict["training_config"])
         return cls(
             experiment_name=config_dict["experiment_name"],
-            experiment_dir=config_dict["experiment_dir"],
+            experiment_root=config_dict["experiment_root"],
             image_representation_model=image_representation_model_details,
             prediction_model_config=prediction_model_config,
             optimizer_config=optimizer_config,
@@ -185,13 +188,21 @@ class ExperimentConfig:
 
             return cls(
                 experiment_name=args["experiment_name"],
-                experiment_dir=args["experiment_dir"],
+                experiment_root=args["experiment_root"],
                 image_representation_model_details=image_representation_model_details,
                 prediction_model_config=prediction_model_config,
                 optimizer_config=optimizer_config,
                 training_config=training_config,
                 seed=args["seed"],
             )
+
+    @property
+    def experiment_directory(self) -> Path:
+        return Path(self.experiment_root) / self.experiment_name
+
+    @property
+    def tensorboard_log_dir(self) -> Path:
+        return Path(self.experiment_root) / self.experiment_name / TENSORBOARD_DIR_NAME
 
     @staticmethod
     def _parse_args() -> Dict[str, Union[str, int, float]]:
@@ -208,9 +219,9 @@ class ExperimentConfig:
             help="Name of the current experiment",
         )
         parser.add_argument(
-            "--experiment-dir",
+            "--experiment-root",
             type=str,
-            dest="experiment_dir",
+            dest="experiment_root",
             help="Name of the experiment directory",
         )
 
