@@ -16,9 +16,11 @@ Originally inspired by this tensorflow [example](https://github.com/tensorflow/t
 2. UPNA Headpose estimation dataset (https://www.unavarra.es/gi4e/databases/hpdb)
 3. UPNA Synthetic Head Pose Database (https://www.unavarra.es/gi4e/databases/shpdb)
 
-
 ### Data Preprocessing
 - `python scripts/python/run_dataset_preprocessing.py -c configs/experiments/preprocessing_config.yml`
+
+### Training a angle prediction head
+- `python scripts/python/train_model.py -c configs/experiments/test_experiment.yml`
 
 
 ## Contribution Guide
