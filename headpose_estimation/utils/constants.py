@@ -1,4 +1,4 @@
-TF_MODELS_CONFIG_PATH = "configs/tf_models/tf_models.yaml"
+TF_MODELS_CONFIG_PATH = "configs/tf_model_registry/tf_model_registry.yaml"
 DEFAULT_SAVE_NP_ARRAY_NAME = "arr_0"
 
 # Tensorflow related constants
