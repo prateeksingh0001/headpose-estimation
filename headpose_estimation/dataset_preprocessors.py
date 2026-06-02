@@ -57,7 +57,6 @@ class UPNAPreprocessor:
         "yaw",
         "pitch",
     ]
-    ANGLE_SCALING_FACTOR = 180
 
     def __init__(self, dataset_name: str, dataset_path: str, output_path: str):
         self._dataset_name = dataset_name
@@ -106,14 +105,11 @@ class UPNAPreprocessor:
                         {
                             "id": frame_name,
                             "image_path": str(frame_image_path),
-                            "yaw_ground_truth": ground_truth.iloc[frame_index]["yaw"]
-                            / self.ANGLE_SCALING_FACTOR,
+                            "yaw_ground_truth": ground_truth.iloc[frame_index]["yaw"],
                             "pitch_ground_truth": ground_truth.iloc[frame_index][
                                 "pitch"
-                            ]
-                            / self.ANGLE_SCALING_FACTOR,
-                            "roll_ground_truth": ground_truth.iloc[frame_index]["roll"]
-                            / self.ANGLE_SCALING_FACTOR,
+                            ],
+                            "roll_ground_truth": ground_truth.iloc[frame_index]["roll"],
                         }
                     )
 

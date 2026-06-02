@@ -26,6 +26,12 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
     PITCH_ANGLE_KEY = "pitch"
     ROLL_ANGLE_KEY = "roll"
 
+    # Since all the angles are in degrees we assume that the total range of angles will between -90 and 90 degrees
+    # across each axis so we normalize the angles to be between [-1, 1].
+    # This keeps the training stable as the difference between the predictions and ground truths are little and there
+    # aren't wild swings in the MSE loss during training.
+    EULER_ANGLE_NORMALIZATION_FACTOR = 90
+
     def __init__(
         self,
         input_representation_size: int,
@@ -191,6 +197,20 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
         ground_truths: Dict[Literal["yaw", "pitch", "roll"], List[float]],
     ) -> List[float]:
 
+        # Normalize ground truths
+        ground_truths[self.YAW_ANGLE_KEY] = [
+            x / self.EULER_ANGLE_NORMALIZATION_FACTOR
+            for x in ground_truths[self.YAW_ANGLE_KEY]
+        ]
+        ground_truths[self.PITCH_ANGLE_KEY] = [
+            x / self.EULER_ANGLE_NORMALIZATION_FACTOR
+            for x in ground_truths[self.PITCH_ANGLE_KEY]
+        ]
+        ground_truths[self.ROLL_ANGLE_KEY] = [
+            x / self.EULER_ANGLE_NORMALIZATION_FACTOR
+            for x in ground_truths[self.ROLL_ANGLE_KEY]
+        ]
+
         batched_image_representations = np.vstack(image_representations)
         _, total_loss, yaw_loss, roll_loss, pitch_loss, summary = session.run(
             [
@@ -236,9 +256,12 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
         for i in range(len(prediction_input)):
             output.append(
                 {
-                    self.YAW_ANGLE_KEY: yaw_angle[i][0],
-                    self.ROLL_ANGLE_KEY: roll_angle[i][0],
-                    self.PITCH_ANGLE_KEY: pitch_angle[i][0],
+                    self.YAW_ANGLE_KEY: yaw_angle[i][0]
+                    * self.EULER_ANGLE_NORMALIZATION_FACTOR,
+                    self.ROLL_ANGLE_KEY: roll_angle[i][0]
+                    * self.EULER_ANGLE_NORMALIZATION_FACTOR,
+                    self.PITCH_ANGLE_KEY: pitch_angle[i][0]
+                    * self.EULER_ANGLE_NORMALIZATION_FACTOR,
                 }
             )
 
