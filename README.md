@@ -1,7 +1,10 @@
 # Transfer learning for Head Pose Estimation
 
-This project implements a system for training headpose estimation models using transfer learning on Inception V3 and Mobilenet models.
+This project implements a system for training headpose estimation models using transfer learning on a frozen backbone image models(currently supports Inception V3 and MobileNet).
+
 Originally inspired by this tensorflow [example](https://github.com/tensorflow/tensorflow/blob/v1.7.0/tensorflow/examples/image_retraining/retrain.py).
+
+Also implements the angle prediction head in the HopeNet paper(https://arxiv.org/pdf/1710.00925)[https://arxiv.org/pdf/1710.00925]
 
 
 ## Setup
