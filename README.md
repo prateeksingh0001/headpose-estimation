@@ -26,9 +26,4 @@ Also implements the angle prediction head in the HopeNet paper([https://arxiv.or
 - `python scripts/python/train_model.py -c configs/experiments/test_experiment.yml`
 
 
-## Contribution Guide
-- Install the dev dependencies using `uv pip install ".[dev]"`
-- Install pre-commit hooks with `pre-commit install`
-
-
 #### Author: Prateek Singh
