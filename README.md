@@ -31,8 +31,4 @@ Also implements the angle prediction head in the HopeNet paper([https://arxiv.or
 - Install pre-commit hooks with `pre-commit install`
 
 
-## Potential Extensions
-- Add the [Hopenet Architecture](https://arxiv.org/pdf/1710.00925.pdf), by introducing a new angle prediction head. 
-
-
 #### Author: Prateek Singh
