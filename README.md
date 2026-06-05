@@ -24,6 +24,3 @@ Also implements the angle prediction head in the HopeNet paper([https://arxiv.or
 
 ### Training a angle prediction head
 - `python scripts/python/train_model.py -c configs/experiments/test_experiment.yml`
-
-
-#### Author: Prateek Singh
