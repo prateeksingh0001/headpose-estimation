@@ -11,12 +11,11 @@ Steps:
     - roll_ground_truth -> roll angle
 """
 
-import json
 import logging
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 import cv2
 import pandas as pd
@@ -62,59 +61,104 @@ class UPNAPreprocessor:
     self._dataset_name = dataset_name
     self._dataset_path = Path(dataset_path)
     self._output_path = Path(output_path)
-    self._images_path = self._output_path / "images"
-    self._ground_truth_path = self._output_path / "preprocessed_ground_truth.json"
+    self._images_path = Path(output_path)
 
-  def preprocess_dataset(self):
+  def process_single_video(
+    self,
+    video_path: Path,
+    ground_truth: pd.DataFrame,
+    running_sample_size: int,
+    total_sample_size: Optional[int] = None,
+  ) -> List[Dict[str, Union[str, float]]]:
+
+    video_capture = cv2.VideoCapture(video_path)
+
+    if not video_capture.isOpened():
+      raise RuntimeError(f"Could not open the file {video_path}")
+
+    frame_index = 0
+    processed_frames = []
+    while True:
+      ret, frame = video_capture.read()
+
+      if not ret:
+        break
+
+      frame_name = f"{self._dataset_name}_{video_path.stem}_{frame_index}"
+      frame_image_path = self._images_path / f"{frame_name}.jpeg"
+      success = cv2.imwrite(frame_image_path, frame)
+
+      processed_frames.append(
+        {
+          "id": frame_name,
+          "image_path": str(frame_image_path),
+          "yaw_ground_truth": ground_truth.iloc[frame_index]["yaw"],
+          "pitch_ground_truth": ground_truth.iloc[frame_index]["pitch"],
+          "roll_ground_truth": ground_truth.iloc[frame_index]["roll"],
+        }
+      )
+
+      if not success:
+        raise RuntimeError(f"Unable to save the frame {frame_index} in the video {video_path}")
+
+      frame_index += 1
+      running_sample_size += 1
+
+      if total_sample_size and running_sample_size == total_sample_size:
+        break
+
+    video_capture.release()
+    cv2.destroyAllWindows()
+
+    return processed_frames
+
+  def process_videos_for_username(
+    self, username_path: Path, running_sample_size: int, total_sample_size: Optional[int] = None
+  ) -> List[Dict[str, Union[str, float]]]:
+
+    processed_frames: List[Dict[str, Union[str, float]]] = []
+    for video_path in username_path.glob("*.mp4"):
+      logger.info(f"Processing file {video_path}")
+
+      ground_truth_filepath = video_path.parent / f"{video_path.stem}_groundtruth3D.txt"
+      ground_truth = pd.read_csv(
+        ground_truth_filepath,
+        sep="\t",
+        header=None,
+        names=self.GROUND_TRUTH_FILE_HEADERS,
+        index_col=False,
+      )
+      processed_frames.extend(
+        self.process_single_video(
+          video_path=video_path,
+          ground_truth=ground_truth,
+          running_sample_size=running_sample_size,
+          total_sample_size=total_sample_size,
+        )
+      )
+
+      if running_sample_size == total_sample_size:
+        break
+
+    return processed_frames
+
+  def process_dataset(self, sample_size: Optional[int] = None) -> List[Dict[str, Union[str, float]]]:
+
     if not os.path.exists(self._images_path):
       self._images_path.mkdir(exist_ok=True)
 
-    preprocessed_dataset: List[Dict[str, Union[str, float]]] = []
+    processed_frames: List[Dict[str, Union[str, float]]] = []
+    running_sample_size = 0
     for username in os.listdir(self._dataset_path):
-      for video_path in (self._dataset_path / username).glob("*.mp4"):
-        logger.info(f"Processing file {video_path}")
-
-        ground_truth_filepath = video_path.parent / f"{video_path.stem}_groundtruth3D.txt"
-        ground_truth = pd.read_csv(
-          ground_truth_filepath,
-          sep="\t",
-          header=None,
-          names=self.GROUND_TRUTH_FILE_HEADERS,
-          index_col=False,
+      processed_frames.extend(
+        self.process_videos_for_username(
+          username_path=self._images_path / username,
+          running_sample_size=running_sample_size,
+          total_sample_size=sample_size,
         )
+      )
 
-        video_capture = cv2.VideoCapture(video_path)
+      if running_sample_size == sample_size:
+        break
 
-        if not video_capture.isOpened():
-          raise RuntimeError(f"Could not open the file {video_path}")
-
-        frame_index = 0
-        while True:
-          ret, frame = video_capture.read()
-
-          if not ret:
-            break
-
-          frame_name = f"{self._dataset_name}_{video_path.stem}_{frame_index}"
-          frame_image_path = self._images_path / f"{frame_name}.jpeg"
-          success = cv2.imwrite(frame_image_path, frame)
-
-          preprocessed_dataset.append(
-            {
-              "id": frame_name,
-              "image_path": str(frame_image_path),
-              "yaw_ground_truth": ground_truth.iloc[frame_index]["yaw"],
-              "pitch_ground_truth": ground_truth.iloc[frame_index]["pitch"],
-              "roll_ground_truth": ground_truth.iloc[frame_index]["roll"],
-            }
-          )
-
-          if not success:
-            raise RuntimeError(f"Unable to save the frame {frame_index} in the video {video_path}")
-
-          frame_index += 1
-
-        video_capture.release()
-        cv2.destroyAllWindows()
-
-    return preprocessed_dataset
+    return processed_frames
