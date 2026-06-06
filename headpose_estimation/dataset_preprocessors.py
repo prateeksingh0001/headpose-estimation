@@ -24,8 +24,6 @@ import numpy as np
 import pandas as pd
 from scipy.io import loadmat
 
-from headpose_estimation.utils.constants import GROUND_TRUTH_FILE_NAME, IMAGE_FOLDER_NAME
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 console_handler = logging.StreamHandler(sys.stdout)

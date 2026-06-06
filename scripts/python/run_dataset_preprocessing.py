@@ -5,10 +5,13 @@ from typing import Any, Dict, Union
 
 from headpose_estimation.dataset_preprocessors import ProcessedFrameType, ThreeHudredWLPPreprocessor, UPNAPreprocessor
 from headpose_estimation.schema import DataPreprocessingConfig
-from headpose_estimation.utils.constants import GROUND_TRUTH_FILE_NAME, IMAGE_FOLDER_NAME
 from headpose_estimation.utils.utils import cls_from_str
 
 DataPreprocessorType = Union[UPNAPreprocessor, ThreeHudredWLPPreprocessor]
+
+# Datapreprocessing constant
+IMAGE_FOLDER_NAME = "images"
+GROUND_TRUTH_FILE_NAME = "ground_truth.json"
 
 
 def main() -> None:
