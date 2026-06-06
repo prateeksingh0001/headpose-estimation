@@ -1,0 +1,12 @@
+dataset_root_path: data/raw
+output_path: data/preprocessed
+datasets:
+  - dataset_name: Head_Pose_Database_UPNA
+    preprocessor_class: headpose_estimation.dataset_preprocessors.UPNAPreprocessor
+    subsample_size: 500
+  - dataset_name: Synthetic_Head_Pose_Database_UPNA
+    preprocessor_class: headpose_estimation.dataset_preprocessors.UPNAPreprocessor
+    subsample_size: 500
+  - dataset_name: 300W_LP
+    preprocessor_class: headpose_estimation.dataset_preprocessors.ThreeHudredWLPPreprocessor
+    subsample_size: 500
