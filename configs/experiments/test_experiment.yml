@@ -1,4 +1,4 @@
-experiment_name: test_experiment_2
+experiment_name: test_experiment_1
 experiment_root: experiments
 image_representation_model:
   architecture: "inception_v3"
@@ -14,7 +14,7 @@ optimizer_config:
   decay_steps: 1000
   decay_rate: 0.95
 training_config:
-  training_data_path: data/processed/preprocessed_ground_truth.json
+  training_data_path: data/preprocessed/ground_truth.json
   train_percentage: 80.0
   validation_percentage: 10.0
   test_percentage: 10.0
