@@ -1,6 +1,6 @@
 [project]
 name = "headpose-estimation"
-version = "0.1.0"
+version = "1.0.0"
 description = "Transfer learning for headpose estimation"
 readme = "README.md"
 requires-python = "==3.7.*"
