@@ -30,6 +30,8 @@ Also implements the angle prediction head from the HopeNet architecture([https:/
 
 ### Training a angle prediction head
 - `python scripts/python/train_model.py -c configs/experiments/test_experiment.yaml`
+- To view tensorboard logs run `tensorboard --logdir <EXPERIMENTS_DIR>/<EXPERIMENT_NAME>/tensorboard_logs`
+    - To find out the `EXPERIMENTS_DIR` and `EXPERIMENT_NAME` check the experiment config.
 
 ## Architecture
 
