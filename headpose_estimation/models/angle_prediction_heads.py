@@ -173,10 +173,12 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
     ground_truths: Dict[Literal["yaw", "pitch", "roll"], List[float]],
   ) -> List[float]:
 
-    # Normalize ground truths
-    ground_truths[YAW_ANGLE_KEY] = [x / EULER_ANGLE_NORMALIZATION_FACTOR for x in ground_truths[YAW_ANGLE_KEY]]
-    ground_truths[PITCH_ANGLE_KEY] = [x / EULER_ANGLE_NORMALIZATION_FACTOR for x in ground_truths[PITCH_ANGLE_KEY]]
-    ground_truths[ROLL_ANGLE_KEY] = [x / EULER_ANGLE_NORMALIZATION_FACTOR for x in ground_truths[ROLL_ANGLE_KEY]]
+    # Normalize ground truths into a new dict so we don't mutate the caller's input
+    ground_truths = {
+      YAW_ANGLE_KEY: [x / EULER_ANGLE_NORMALIZATION_FACTOR for x in ground_truths[YAW_ANGLE_KEY]],
+      PITCH_ANGLE_KEY: [x / EULER_ANGLE_NORMALIZATION_FACTOR for x in ground_truths[PITCH_ANGLE_KEY]],
+      ROLL_ANGLE_KEY: [x / EULER_ANGLE_NORMALIZATION_FACTOR for x in ground_truths[ROLL_ANGLE_KEY]],
+    }
 
     batched_image_representations = np.vstack(image_representations)
     _, total_loss, yaw_loss, roll_loss, pitch_loss, summary = session.run(
