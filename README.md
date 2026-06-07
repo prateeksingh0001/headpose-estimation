@@ -32,7 +32,7 @@ Also implements the angle prediction head in the HopeNet paper([https://arxiv.or
 - `python scripts/python/train_model.py -c configs/experiments/test_experiment.yaml`
 
 
-## Some Future Extensions
+## Future Extensions
 1. Code:
     - Modernize the codebase in Pytorch or Tensorflow 2
 2. Modelling
