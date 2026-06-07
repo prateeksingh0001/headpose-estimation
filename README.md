@@ -7,7 +7,7 @@ Originally inspired by this tensorflow [example](https://github.com/tensorflow/t
 Also implements the angle prediction head in the HopeNet paper([https://arxiv.org/pdf/1710.00925](https://arxiv.org/pdf/1710.00925))
 
 
-<img src="docs/assets/images/angle_annotated_image_1.png" /> <img src="docs/assets/images/angle_annotated_image_2.png" /> 
+<img src="docs/assets/images/angle_annotated_image_1.png"/> <img src="docs/assets/images/angle_annotated_image_2.png"/> 
 
 ## Setup
 - Create a conda or venv environment with Python 3.7
@@ -31,6 +31,9 @@ Also implements the angle prediction head in the HopeNet paper([https://arxiv.or
 ### Training a angle prediction head
 - `python scripts/python/train_model.py -c configs/experiments/test_experiment.yaml`
 
+## Architecture
+
+<img src="docs/assets/images/model_architecture.jpg"/>
 
 ## Future Extensions
 1. Code:
