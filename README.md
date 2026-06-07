@@ -37,7 +37,7 @@ Also implements the angle prediction head from the HopeNet architecture([https:/
 
 ## Future Extensions
 1. Code:
-    - Modernize the codebase in Pytorch or Tensorflow 2
+    - Modernize the codebase in Pytorch or Tensorflow 2 and newer version of Python.
 2. Modelling
     - Regularization
         - Add Dropout layers at the beginning of the model heads.
