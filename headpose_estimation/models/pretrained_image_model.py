@@ -117,7 +117,7 @@ class PretrainedBackBoneImageModel(BaseModel[str, np.ndarray]):
       return graph_def
 
   @property
-  def input_placeholder(self) -> None:
+  def input_placeholder(self) -> tf.Tensor:
     return self._input_placeholder
 
   @property
