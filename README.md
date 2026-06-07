@@ -4,7 +4,7 @@ This project implements a system for training headpose estimation models using t
 
 Originally inspired by this tensorflow [example](https://github.com/tensorflow/tensorflow/blob/v1.7.0/tensorflow/examples/image_retraining/retrain.py).
 
-Also implements the angle prediction head in the HopeNet paper([https://arxiv.org/pdf/1710.00925](https://arxiv.org/pdf/1710.00925))
+Also implements the angle prediction head from the HopeNet architecture([https://arxiv.org/pdf/1710.00925](https://arxiv.org/pdf/1710.00925))
 
 
 <img src="docs/assets/images/angle_annotated_image_1.png"/> <img src="docs/assets/images/angle_annotated_image_2.png"/> 
