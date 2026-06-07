@@ -31,13 +31,15 @@ class EulerAnglesPredictionModel(BaseModel[str, Dict[str, float]]):
 
   @property
   def prediction_ops(self) -> Dict[str, tf.Tensor]:
-    return self._angle_predictin_head.prediction_ops
+    return self._angle_prediction_head.prediction_ops
 
   def predict(self, session: tf.compat.v1.Session, prediction_input: List[str]) -> List[Dict[str, float]]:
     backbone_model_representations: List[np.ndarray] = self._backbone_image_model.predict(
       session=session, prediction_input=prediction_input
     )
 
-    output_angles = self.angle_prediction_head.predict(session=session, prediction_input=backbone_model_representations)
+    output_angles = self._angle_prediction_head.predict(
+      session=session, prediction_input=backbone_model_representations
+    )
 
     return output_angles

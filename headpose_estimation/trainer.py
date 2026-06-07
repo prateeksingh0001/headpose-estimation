@@ -75,10 +75,7 @@ class PredictionHeadTrainer:
       Path(experiment_config.training_config.model_save_dir).mkdir(parents=True, exist_ok=True)
 
   def _load_dataset(self) -> Dataset:
-    dataset = Dataset.load_from_file(file_path=self.experiment_config.training_config.training_data_path)
-    dataset.datapoints = dataset.datapoints
-
-    return dataset
+    return Dataset.load_from_file(file_path=self.experiment_config.training_config.training_data_path)
 
   def _create_intermediate_image_representations(
     self,
