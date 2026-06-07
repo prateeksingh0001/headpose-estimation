@@ -12,6 +12,7 @@ from headpose_estimation.schema import Dataset, ExperimentConfig
 from headpose_estimation.utils.constants import (
   DEFAULT_PREDICTION_HEAD_FROZEN_GRAPH_NAME,
   DEFAULT_SAVE_NP_ARRAY_NAME,
+  EULER_ANGLE_NORMALIZATION_FACTOR,
   PITCH_ANGLE_KEY,
   ROLL_ANGLE_KEY,
   YAW_ANGLE_KEY,
@@ -20,7 +21,7 @@ from headpose_estimation.utils.tensorflow_model_handler import (
   TensorflowV1ModelConfig,
   TensorflowV1ModelHandler,
 )
-from headpose_estimation.utils.utils import optimizer_factory, set_global_seed
+from headpose_estimation.utils.utils import cls_from_str, optimizer_factory, set_global_seed
 
 
 class PredictionHeadTrainer:
@@ -51,7 +52,7 @@ class PredictionHeadTrainer:
 
     self._pretrained_model = PretrainedBackBoneImageModel(tf_model_config=pretrained_model_config)
 
-    self._angle_prediction_head = EulerAnglesPredictionHead(
+    self._angle_prediction_head = cls_from_str(self.experiment_config.prediction_model_config.prediction_head_class)(
       input_representation_size=pretrained_model_config.output_tensor_size,
       layer_sizes=self.experiment_config.prediction_model_config.layer_sizes,
       optimizer=optimizer,
@@ -157,20 +158,12 @@ class PredictionHeadTrainer:
         gt_angles[ROLL_ANGLE_KEY],
         gt_angles[PITCH_ANGLE_KEY],
       ):
-        squared_yaw_losses.append(
-          ((predicted_angles[YAW_ANGLE_KEY] - yaw_gt) / self._angle_prediction_head.EULER_ANGLE_NORMALIZATION_FACTOR)
-          ** 2
-        )
+        squared_yaw_losses.append(((predicted_angles[YAW_ANGLE_KEY] - yaw_gt) / EULER_ANGLE_NORMALIZATION_FACTOR) ** 2)
         squared_roll_losses.append(
-          ((predicted_angles[ROLL_ANGLE_KEY] - roll_gt) / self._angle_prediction_head.EULER_ANGLE_NORMALIZATION_FACTOR)
-          ** 2
+          ((predicted_angles[ROLL_ANGLE_KEY] - roll_gt) / EULER_ANGLE_NORMALIZATION_FACTOR) ** 2
         )
         squared_pitch_losses.append(
-          (
-            (predicted_angles[PITCH_ANGLE_KEY] - pitch_gt)
-            / self._angle_prediction_head.EULER_ANGLE_NORMALIZATION_FACTOR
-          )
-          ** 2
+          ((predicted_angles[PITCH_ANGLE_KEY] - pitch_gt) / EULER_ANGLE_NORMALIZATION_FACTOR) ** 2
         )
 
     yaw_mse = np.mean(squared_yaw_losses)

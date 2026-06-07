@@ -123,6 +123,7 @@ class PretrainedImageRepresentationModelConfig:
 
 @dataclass
 class PredictionHeadModelConfig:
+  prediction_head_class: str = "headpose_estimation.models.angle_prediction_heads.EulerAnglesPredictionHead"
   layer_sizes: List[int] = field(default_factory=list)
 
 
@@ -180,7 +181,9 @@ class ExperimentConfig:
         architecture=args["architecture"], model_dir=args["model_dir"]
       )
 
-      prediction_model_config = PredictionHeadModelConfig(layer_sizes=args["layer_sizes"])
+      prediction_model_config = PredictionHeadModelConfig(
+        prediction_head_class=args["angle_prediction_head"], layer_sizes=args["layer_sizes"]
+      )
 
       if "optimizer_class" in args and "learning_rate" in args:
         optimizer_config = OptimizerConfig(
@@ -262,6 +265,13 @@ class ExperimentConfig:
     )
 
     # Prediction head params
+    parser.add_argument(
+      "--angle-prediction-head",
+      type=str,
+      dest="angles_prediction_head",
+      default="headpose_estimation.models.angle_prediction_heads.EulerAnglesPredictionHead",
+      help="Class path to the angle prediction head to be trained",
+    )
     parser.add_argument(
       "--prediction-head-layer-sizes",
       nargs="+",

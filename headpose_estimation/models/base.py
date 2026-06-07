@@ -5,7 +5,12 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import graph_util
 
-from headpose_estimation.utils.constants import PITCH_ANGLE_KEY, ROLL_ANGLE_KEY, YAW_ANGLE_KEY
+from headpose_estimation.utils.constants import (
+  EULER_ANGLE_NORMALIZATION_FACTOR,
+  PITCH_ANGLE_KEY,
+  ROLL_ANGLE_KEY,
+  YAW_ANGLE_KEY,
+)
 
 ModelInput = TypeVar("ModelInput")
 PredictionOutput = TypeVar("PredictionOutput")
@@ -32,12 +37,6 @@ class BaseModel(Generic[ModelInput, PredictionOutput], ABC):
 
 
 class BaseAnglePredictionHeadModel(BaseModel[np.ndarray, Dict[str, float]]):
-  # Since all the angles are in degrees we assume that the total range of angles will between -90 and 90 degrees
-  # across each axis so we normalize the angles to be between [-1, 1].
-  # This keeps the training stable as the difference between the predictions and ground truths are little and there
-  # aren't wild swings in the MSE loss during training.
-  EULER_ANGLE_NORMALIZATION_FACTOR = 90
-
   @property
   def ground_truth_placeholders(self) -> Dict[str, tf.Tensor]:
     return self._ground_truth_placeholder
@@ -82,9 +81,9 @@ class BaseAnglePredictionHeadModel(BaseModel[np.ndarray, Dict[str, float]]):
     for i in range(len(prediction_input)):
       output.append(
         {
-          YAW_ANGLE_KEY: yaw_angle[i][0] * self.EULER_ANGLE_NORMALIZATION_FACTOR,
-          PITCH_ANGLE_KEY: pitch_angle[i][0] * self.EULER_ANGLE_NORMALIZATION_FACTOR,
-          ROLL_ANGLE_KEY: roll_angle[i][0] * self.EULER_ANGLE_NORMALIZATION_FACTOR,
+          YAW_ANGLE_KEY: yaw_angle[i][0] * EULER_ANGLE_NORMALIZATION_FACTOR,
+          PITCH_ANGLE_KEY: pitch_angle[i][0] * EULER_ANGLE_NORMALIZATION_FACTOR,
+          ROLL_ANGLE_KEY: roll_angle[i][0] * EULER_ANGLE_NORMALIZATION_FACTOR,
         }
       )
 

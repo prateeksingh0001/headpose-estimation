@@ -10,3 +10,9 @@ YAW_ANGLE_KEY = "yaw"
 PITCH_ANGLE_KEY = "pitch"
 ROLL_ANGLE_KEY = "roll"
 TOTAL = "total"
+
+# Since all the angles are in degrees we assume that the total range of angles will between -90 and 90 degrees
+# across each axis so we normalize the angles to be between [-1, 1].
+# This keeps the training stable as the difference between the predictions and ground truths are little and there
+# aren't wild swings in the MSE loss during training.
+EULER_ANGLE_NORMALIZATION_FACTOR = 90

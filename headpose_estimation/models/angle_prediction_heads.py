@@ -1,3 +1,4 @@
+import math
 from typing import Callable, Dict, List
 
 import numpy as np
@@ -9,7 +10,13 @@ from tensorflow.train import Optimizer
 from typing_extensions import Literal
 
 from headpose_estimation.models.base import BaseAnglePredictionHeadModel
-from headpose_estimation.utils.constants import PITCH_ANGLE_KEY, ROLL_ANGLE_KEY, TOTAL, YAW_ANGLE_KEY
+from headpose_estimation.utils.constants import (
+  EULER_ANGLE_NORMALIZATION_FACTOR,
+  PITCH_ANGLE_KEY,
+  ROLL_ANGLE_KEY,
+  TOTAL,
+  YAW_ANGLE_KEY,
+)
 from headpose_estimation.utils.utils import fn_from_str
 
 
@@ -167,9 +174,9 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
   ) -> List[float]:
 
     # Normalize ground truths
-    ground_truths[YAW_ANGLE_KEY] = [x / self.EULER_ANGLE_NORMALIZATION_FACTOR for x in ground_truths[YAW_ANGLE_KEY]]
-    ground_truths[PITCH_ANGLE_KEY] = [x / self.EULER_ANGLE_NORMALIZATION_FACTOR for x in ground_truths[PITCH_ANGLE_KEY]]
-    ground_truths[ROLL_ANGLE_KEY] = [x / self.EULER_ANGLE_NORMALIZATION_FACTOR for x in ground_truths[ROLL_ANGLE_KEY]]
+    ground_truths[YAW_ANGLE_KEY] = [x / EULER_ANGLE_NORMALIZATION_FACTOR for x in ground_truths[YAW_ANGLE_KEY]]
+    ground_truths[PITCH_ANGLE_KEY] = [x / EULER_ANGLE_NORMALIZATION_FACTOR for x in ground_truths[PITCH_ANGLE_KEY]]
+    ground_truths[ROLL_ANGLE_KEY] = [x / EULER_ANGLE_NORMALIZATION_FACTOR for x in ground_truths[ROLL_ANGLE_KEY]]
 
     batched_image_representations = np.vstack(image_representations)
     _, total_loss, yaw_loss, roll_loss, pitch_loss, summary = session.run(
@@ -248,7 +255,7 @@ class HopeNetPredictionHead(BaseAnglePredictionHeadModel):
 
     self._learning_rate = learning_rate_tensor
 
-    self.summary_ops = []
+    self._summary_ops = []
 
     self._initialize_training_ops(
       prediction_tensors=self._prediction_ops,
@@ -403,17 +410,29 @@ class HopeNetPredictionHead(BaseAnglePredictionHeadModel):
     ground_truths: Dict[Literal["yaw", "pitch", "roll"], List[float]],
   ) -> List[float]:
 
-    angle_bin_ground_truths = {
+    angle_bins = {
       self.YAW_CLASS_KEY: [
-        (angle + self.MAX_EULER_ANGLE) / self.ANGLE_PER_BUCKET for angle in ground_truths[YAW_ANGLE_KEY]
+        math.floor((angle + self.MAX_EULER_ANGLE) / self.ANGLE_PER_BUCKET) for angle in ground_truths[YAW_ANGLE_KEY]
       ],
       self.PITCH_CLASS_KEY: [
-        (angle + self.MAX_EULER_ANGLE) / self.ANGLE_PER_BUCKET for angle in ground_truths[PITCH_ANGLE_KEY]
+        math.floor((angle + self.MAX_EULER_ANGLE) / self.ANGLE_PER_BUCKET) for angle in ground_truths[PITCH_ANGLE_KEY]
       ],
       self.ROLL_CLASS_KEY: [
-        (angle + self.MAX_EULER_ANGLE) / self.ANGLE_PER_BUCKET for angle in ground_truths[ROLL_ANGLE_KEY]
+        math.floor((angle + self.MAX_EULER_ANGLE) / self.ANGLE_PER_BUCKET) for angle in ground_truths[ROLL_ANGLE_KEY]
       ],
     }
+    angle_bin_ground_truths = {
+      self.YAW_CLASS_KEY: np.eye(self.NUM_ANGLE_BUCKETS)[angle_bins[self.YAW_CLASS_KEY]],
+      self.PITCH_CLASS_KEY: np.eye(self.NUM_ANGLE_BUCKETS)[angle_bins[self.PITCH_CLASS_KEY]],
+      self.ROLL_CLASS_KEY: np.eye(self.NUM_ANGLE_BUCKETS)[angle_bins[self.ROLL_CLASS_KEY]],
+    }
+
+    ground_truths = {
+      YAW_ANGLE_KEY: [angle / EULER_ANGLE_NORMALIZATION_FACTOR for angle in ground_truths[YAW_ANGLE_KEY]],
+      PITCH_ANGLE_KEY: [angle / EULER_ANGLE_NORMALIZATION_FACTOR for angle in ground_truths[PITCH_ANGLE_KEY]],
+      ROLL_ANGLE_KEY: [angle / EULER_ANGLE_NORMALIZATION_FACTOR for angle in ground_truths[ROLL_ANGLE_KEY]],
+    }
+
     batched_image_representations = np.vstack(image_representations)
     _, total_loss, yaw_loss, roll_loss, pitch_loss, summary = session.run(
       [
