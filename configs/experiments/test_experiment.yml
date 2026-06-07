@@ -1,4 +1,4 @@
-experiment_name: test_experiment_1
+experiment_name: test_experiment_2
 experiment_root: experiments
 image_representation_model:
   architecture: "inception_v3"
@@ -22,6 +22,6 @@ training_config:
   num_epochs: 20
   batch_size: 20
   eval_step_interval: 100
-  model_save_dir: model/trained_models
+  model_save_dir: models/trained_models
   checkpoint_save_frequency: 10
 seed: 100

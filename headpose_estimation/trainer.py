@@ -12,6 +12,9 @@ from headpose_estimation.schema import Dataset, ExperimentConfig
 from headpose_estimation.utils.constants import (
   DEFAULT_PREDICTION_HEAD_FROZEN_GRAPH_NAME,
   DEFAULT_SAVE_NP_ARRAY_NAME,
+  PITCH_ANGLE_KEY,
+  ROLL_ANGLE_KEY,
+  YAW_ANGLE_KEY,
 )
 from headpose_estimation.utils.tensorflow_model_handler import (
   TensorflowV1ModelConfig,
@@ -72,7 +75,7 @@ class PredictionHeadTrainer:
 
   def _load_dataset(self) -> Dataset:
     dataset = Dataset.load_from_file(file_path=self.experiment_config.training_config.training_data_path)
-    dataset.datapoints = dataset.datapoints[:1000]
+    dataset.datapoints = dataset.datapoints
 
     return dataset
 
@@ -114,15 +117,15 @@ class PredictionHeadTrainer:
   ) -> Tuple[List[np.ndarray], Dict[str, np.ndarray]]:
 
     image_representations = []
-    euler_angles = {"yaw": [], "pitch": [], "roll": []}
+    euler_angles = {YAW_ANGLE_KEY: [], PITCH_ANGLE_KEY: [], ROLL_ANGLE_KEY: []}
 
     for datapoint in dataset.datapoints[start_index : start_index + batch_size]:
       with np.load(datapoint.intermediate_representation_path) as data:
         image_representations.append(data[DEFAULT_SAVE_NP_ARRAY_NAME])
 
-      euler_angles["yaw"].append(datapoint.yaw_ground_truth)
-      euler_angles["pitch"].append(datapoint.pitch_ground_truth)
-      euler_angles["roll"].append(datapoint.roll_ground_truth)
+      euler_angles[YAW_ANGLE_KEY].append(datapoint.yaw_ground_truth)
+      euler_angles[PITCH_ANGLE_KEY].append(datapoint.pitch_ground_truth)
+      euler_angles[ROLL_ANGLE_KEY].append(datapoint.roll_ground_truth)
 
     for key, val in euler_angles.items():
       euler_angles[key] = np.array(val)
@@ -150,13 +153,25 @@ class PredictionHeadTrainer:
 
       for predicted_angles, yaw_gt, roll_gt, pitch_gt in zip(
         angle_predictions,
-        gt_angles["yaw"],
-        gt_angles["roll"],
-        gt_angles["pitch"],
+        gt_angles[YAW_ANGLE_KEY],
+        gt_angles[ROLL_ANGLE_KEY],
+        gt_angles[PITCH_ANGLE_KEY],
       ):
-        squared_yaw_losses.append((predicted_angles["yaw"] - yaw_gt) ** 2)
-        squared_roll_losses.append((predicted_angles["roll"] - roll_gt) ** 2)
-        squared_pitch_losses.append((predicted_angles["pitch"] - pitch_gt) ** 2)
+        squared_yaw_losses.append(
+          ((predicted_angles[YAW_ANGLE_KEY] - yaw_gt) / self._angle_prediction_head.EULER_ANGLE_NORMALIZATION_FACTOR)
+          ** 2
+        )
+        squared_roll_losses.append(
+          ((predicted_angles[ROLL_ANGLE_KEY] - roll_gt) / self._angle_prediction_head.EULER_ANGLE_NORMALIZATION_FACTOR)
+          ** 2
+        )
+        squared_pitch_losses.append(
+          (
+            (predicted_angles[PITCH_ANGLE_KEY] - pitch_gt)
+            / self._angle_prediction_head.EULER_ANGLE_NORMALIZATION_FACTOR
+          )
+          ** 2
+        )
 
     yaw_mse = np.mean(squared_yaw_losses)
     roll_mse = np.mean(squared_roll_losses)

@@ -9,6 +9,7 @@ from tensorflow.train import Optimizer
 from typing_extensions import Literal
 
 from headpose_estimation.models.base import BaseAnglePredictionHeadModel
+from headpose_estimation.utils.constants import PITCH_ANGLE_KEY, ROLL_ANGLE_KEY, TOTAL, YAW_ANGLE_KEY
 from headpose_estimation.utils.utils import fn_from_str
 
 
@@ -21,12 +22,6 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
   builds the static computation graph looks at the shape of the input tensor and uses it to create the weight matrix
   for the Dense layer.
   """
-
-  # Since all the angles are in degrees we assume that the total range of angles will between -90 and 90 degrees
-  # across each axis so we normalize the angles to be between [-1, 1].
-  # This keeps the training stable as the difference between the predictions and ground truths are little and there
-  # aren't wild swings in the MSE loss during training.
-  EULER_ANGLE_NORMALIZATION_FACTOR = 90
 
   def __init__(
     self,
@@ -67,9 +62,9 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
     )
 
     self._prediction_ops = {
-      self.YAW_ANGLE_KEY: yaw_angle_prediction,
-      self.PITCH_ANGLE_KEY: pitch_angle_prediction,
-      self.ROLL_ANGLE_KEY: roll_angle_prediction,
+      YAW_ANGLE_KEY: yaw_angle_prediction,
+      PITCH_ANGLE_KEY: pitch_angle_prediction,
+      ROLL_ANGLE_KEY: roll_angle_prediction,
     }
 
     self._learning_rate = learning_rate_tensor
@@ -118,22 +113,22 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
     pitch_ground_truth_placeholder = tf.compat.v1.placeholder(tf.float32, shape=[None], name="input_pitch_gt")
 
     self._ground_truth_placeholder = {
-      self.YAW_ANGLE_KEY: yaw_ground_truth_placeholder,
-      self.ROLL_ANGLE_KEY: roll_ground_truth_placeholder,
-      self.PITCH_ANGLE_KEY: pitch_ground_truth_placeholder,
+      YAW_ANGLE_KEY: yaw_ground_truth_placeholder,
+      ROLL_ANGLE_KEY: roll_ground_truth_placeholder,
+      PITCH_ANGLE_KEY: pitch_ground_truth_placeholder,
     }
 
     yaw_loss = mean_squared_error(
       yaw_ground_truth_placeholder,
-      tf.squeeze(prediction_tensors[self.YAW_ANGLE_KEY], axis=1),
+      tf.squeeze(prediction_tensors[YAW_ANGLE_KEY], axis=1),
     )
     roll_loss = mean_squared_error(
       roll_ground_truth_placeholder,
-      tf.squeeze(prediction_tensors[self.ROLL_ANGLE_KEY], axis=1),
+      tf.squeeze(prediction_tensors[ROLL_ANGLE_KEY], axis=1),
     )
     pitch_loss = mean_squared_error(
       pitch_ground_truth_placeholder,
-      tf.squeeze(prediction_tensors[self.PITCH_ANGLE_KEY], axis=1),
+      tf.squeeze(prediction_tensors[PITCH_ANGLE_KEY], axis=1),
     )
 
     total_loss = yaw_loss + roll_loss + pitch_loss
@@ -154,10 +149,10 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
     )
 
     self._loss_ops = {
-      self.TOTAL: total_loss,
-      self.YAW_ANGLE_KEY: yaw_loss,
-      self.ROLL_ANGLE_KEY: roll_loss,
-      self.PITCH_ANGLE_KEY: pitch_loss,
+      TOTAL: total_loss,
+      YAW_ANGLE_KEY: yaw_loss,
+      ROLL_ANGLE_KEY: roll_loss,
+      PITCH_ANGLE_KEY: pitch_loss,
     }
 
     self._training_ops = {
@@ -172,15 +167,9 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
   ) -> List[float]:
 
     # Normalize ground truths
-    ground_truths[self.YAW_ANGLE_KEY] = [
-      x / self.EULER_ANGLE_NORMALIZATION_FACTOR for x in ground_truths[self.YAW_ANGLE_KEY]
-    ]
-    ground_truths[self.PITCH_ANGLE_KEY] = [
-      x / self.EULER_ANGLE_NORMALIZATION_FACTOR for x in ground_truths[self.PITCH_ANGLE_KEY]
-    ]
-    ground_truths[self.ROLL_ANGLE_KEY] = [
-      x / self.EULER_ANGLE_NORMALIZATION_FACTOR for x in ground_truths[self.ROLL_ANGLE_KEY]
-    ]
+    ground_truths[YAW_ANGLE_KEY] = [x / self.EULER_ANGLE_NORMALIZATION_FACTOR for x in ground_truths[YAW_ANGLE_KEY]]
+    ground_truths[PITCH_ANGLE_KEY] = [x / self.EULER_ANGLE_NORMALIZATION_FACTOR for x in ground_truths[PITCH_ANGLE_KEY]]
+    ground_truths[ROLL_ANGLE_KEY] = [x / self.EULER_ANGLE_NORMALIZATION_FACTOR for x in ground_truths[ROLL_ANGLE_KEY]]
 
     batched_image_representations = np.vstack(image_representations)
     _, total_loss, yaw_loss, roll_loss, pitch_loss, summary = session.run(
@@ -191,9 +180,9 @@ class EulerAnglesPredictionHead(BaseAnglePredictionHeadModel):
       ],
       feed_dict={
         self.input_placeholder: batched_image_representations,
-        self.ground_truth_placeholders[self.YAW_ANGLE_KEY]: ground_truths[self.YAW_ANGLE_KEY],
-        self.ground_truth_placeholders[self.PITCH_ANGLE_KEY]: ground_truths[self.PITCH_ANGLE_KEY],
-        self.ground_truth_placeholders[self.ROLL_ANGLE_KEY]: ground_truths[self.ROLL_ANGLE_KEY],
+        self.ground_truth_placeholders[YAW_ANGLE_KEY]: ground_truths[YAW_ANGLE_KEY],
+        self.ground_truth_placeholders[PITCH_ANGLE_KEY]: ground_truths[PITCH_ANGLE_KEY],
+        self.ground_truth_placeholders[ROLL_ANGLE_KEY]: ground_truths[ROLL_ANGLE_KEY],
       },
     )
 
@@ -252,9 +241,9 @@ class HopeNetPredictionHead(BaseAnglePredictionHeadModel):
     )
 
     self._prediction_ops = {
-      self.YAW_ANGLE_KEY: yaw_angle_prediction,
-      self.PITCH_ANGLE_KEY: pitch_angle_prediction,
-      self.ROLL_ANGLE_KEY: roll_angle_prediction,
+      YAW_ANGLE_KEY: yaw_angle_prediction,
+      PITCH_ANGLE_KEY: pitch_angle_prediction,
+      ROLL_ANGLE_KEY: roll_angle_prediction,
     }
 
     self._learning_rate = learning_rate_tensor
@@ -264,9 +253,9 @@ class HopeNetPredictionHead(BaseAnglePredictionHeadModel):
     self._initialize_training_ops(
       prediction_tensors=self._prediction_ops,
       softmax_logit_tensors={
-        self.YAW_ANGLE_KEY: yaw_angle_logits,
-        self.PITCH_ANGLE_KEY: pitch_angle_logits,
-        self.ROLL_ANGLE_KEY: roll_angle_logits,
+        YAW_ANGLE_KEY: yaw_angle_logits,
+        PITCH_ANGLE_KEY: pitch_angle_logits,
+        ROLL_ANGLE_KEY: roll_angle_logits,
       },
       optimizer=optimizer,
       global_step=global_step,
@@ -332,8 +321,8 @@ class HopeNetPredictionHead(BaseAnglePredictionHeadModel):
       tf.float32, shape=[None, self.NUM_ANGLE_BUCKETS], name="input_yaw_bucket_gt"
     )
     yaw_loss_tensor = self._calculate_loss_for_angle(
-      angle_prediction_tensor=prediction_tensors[self.YAW_ANGLE_KEY],
-      logit_tensor=softmax_logit_tensors[self.YAW_ANGLE_KEY],
+      angle_prediction_tensor=prediction_tensors[YAW_ANGLE_KEY],
+      logit_tensor=softmax_logit_tensors[YAW_ANGLE_KEY],
       angle_gt_tensor=yaw_angle_ground_truth_placeholder,
       angle_class_gt_tensor=yaw_class_gt_placeholder,
     )
@@ -345,8 +334,8 @@ class HopeNetPredictionHead(BaseAnglePredictionHeadModel):
       name="input_roll_bucket_gt",
     )
     roll_loss_tensor = self._calculate_loss_for_angle(
-      angle_prediction_tensor=prediction_tensors[self.ROLL_ANGLE_KEY],
-      logit_tensor=softmax_logit_tensors[self.ROLL_ANGLE_KEY],
+      angle_prediction_tensor=prediction_tensors[ROLL_ANGLE_KEY],
+      logit_tensor=softmax_logit_tensors[ROLL_ANGLE_KEY],
       angle_gt_tensor=roll_angle_ground_truth_placeholder,
       angle_class_gt_tensor=roll_class_gt_placeholder,
     )
@@ -358,18 +347,18 @@ class HopeNetPredictionHead(BaseAnglePredictionHeadModel):
       name="input_pitch_bucket_gt",
     )
     pitch_loss_tensor = self._calculate_loss_for_angle(
-      angle_prediction_tensor=prediction_tensors[self.PITCH_ANGLE_KEY],
-      logit_tensor=softmax_logit_tensors[self.PITCH_ANGLE_KEY],
+      angle_prediction_tensor=prediction_tensors[PITCH_ANGLE_KEY],
+      logit_tensor=softmax_logit_tensors[PITCH_ANGLE_KEY],
       angle_gt_tensor=pitch_angle_ground_truth_placeholder,
       angle_class_gt_tensor=pitch_class_gt_placeholder,
     )
 
     self._ground_truth_placeholder = {
-      self.YAW_ANGLE_KEY: yaw_angle_ground_truth_placeholder,
+      YAW_ANGLE_KEY: yaw_angle_ground_truth_placeholder,
       self.YAW_CLASS_KEY: yaw_class_gt_placeholder,
-      self.ROLL_ANGLE_KEY: roll_angle_ground_truth_placeholder,
+      ROLL_ANGLE_KEY: roll_angle_ground_truth_placeholder,
       self.ROLL_CLASS_KEY: roll_class_gt_placeholder,
-      self.PITCH_ANGLE_KEY: pitch_angle_ground_truth_placeholder,
+      PITCH_ANGLE_KEY: pitch_angle_ground_truth_placeholder,
       self.PITCH_CLASS_KEY: pitch_class_gt_placeholder,
     }
 
@@ -399,10 +388,10 @@ class HopeNetPredictionHead(BaseAnglePredictionHeadModel):
     )
 
     self._loss_ops = {
-      self.TOTAL: total_loss,
-      self.YAW_ANGLE_KEY: yaw_loss,
-      self.ROLL_ANGLE_KEY: roll_loss,
-      self.PITCH_ANGLE_KEY: pitch_loss,
+      TOTAL: total_loss,
+      YAW_ANGLE_KEY: yaw_loss,
+      ROLL_ANGLE_KEY: roll_loss,
+      PITCH_ANGLE_KEY: pitch_loss,
     }
 
     self._training_ops = {"optimizer_node": optimizer_node}
@@ -416,13 +405,13 @@ class HopeNetPredictionHead(BaseAnglePredictionHeadModel):
 
     angle_bin_ground_truths = {
       self.YAW_CLASS_KEY: [
-        (angle + self.MAX_EULER_ANGLE) / self.ANGLE_PER_BUCKET for angle in ground_truths[self.YAW_ANGLE_KEY]
+        (angle + self.MAX_EULER_ANGLE) / self.ANGLE_PER_BUCKET for angle in ground_truths[YAW_ANGLE_KEY]
       ],
       self.PITCH_CLASS_KEY: [
-        (angle + self.MAX_EULER_ANGLE) / self.ANGLE_PER_BUCKET for angle in ground_truths[self.PITCH_ANGLE_KEY]
+        (angle + self.MAX_EULER_ANGLE) / self.ANGLE_PER_BUCKET for angle in ground_truths[PITCH_ANGLE_KEY]
       ],
       self.ROLL_CLASS_KEY: [
-        (angle + self.MAX_EULER_ANGLE) / self.ANGLE_PER_BUCKET for angle in ground_truths[self.ROLL_ANGLE_KEY]
+        (angle + self.MAX_EULER_ANGLE) / self.ANGLE_PER_BUCKET for angle in ground_truths[ROLL_ANGLE_KEY]
       ],
     }
     batched_image_representations = np.vstack(image_representations)
@@ -434,9 +423,9 @@ class HopeNetPredictionHead(BaseAnglePredictionHeadModel):
       ],
       feed_dict={
         self.input_placeholder: batched_image_representations,
-        self.ground_truth_placeholders[self.YAW_ANGLE_KEY]: ground_truths[self.YAW_ANGLE_KEY],
-        self.ground_truth_placeholders[self.PITCH_ANGLE_KEY]: ground_truths[self.PITCH_ANGLE_KEY],
-        self.ground_truth_placeholders[self.ROLL_ANGLE_KEY]: ground_truths[self.ROLL_ANGLE_KEY],
+        self.ground_truth_placeholders[YAW_ANGLE_KEY]: ground_truths[YAW_ANGLE_KEY],
+        self.ground_truth_placeholders[PITCH_ANGLE_KEY]: ground_truths[PITCH_ANGLE_KEY],
+        self.ground_truth_placeholders[ROLL_ANGLE_KEY]: ground_truths[ROLL_ANGLE_KEY],
         self.ground_truth_placeholders[self.YAW_CLASS_KEY]: angle_bin_ground_truths[self.YAW_CLASS_KEY],
         self.ground_truth_placeholders[self.PITCH_CLASS_KEY]: angle_bin_ground_truths[self.PITCH_CLASS_KEY],
         self.ground_truth_placeholders[self.ROLL_CLASS_KEY]: angle_bin_ground_truths[self.ROLL_CLASS_KEY],
