@@ -1,9 +1,10 @@
-experiment_name: test_experiment_2
+experiment_name: test_experiment_3
 experiment_root: experiments
 image_representation_model:
   architecture: "inception_v3"
   model_dir: "models"
 prediction_head:
+  prediction_head_class: headpose_estimation.models.angle_prediction_heads.HopeNetPredictionHead
   layer_sizes:
     - 256
     - 128
@@ -14,14 +15,14 @@ optimizer_config:
   decay_steps: 1000
   decay_rate: 0.95
 training_config:
-  training_data_path: data/processed/preprocessed_ground_truth.json
+  training_data_path: data/preprocessed/ground_truth.json
   train_percentage: 80.0
   validation_percentage: 10.0
   test_percentage: 10.0
   intermediate_representations_save_dir: data/bottleneck_representations
-  num_epochs: 20
+  num_epochs: 30
   batch_size: 20
   eval_step_interval: 100
-  model_save_dir: model/trained_models
+  model_save_dir: models/trained_models
   checkpoint_save_frequency: 10
 seed: 100
