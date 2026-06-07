@@ -29,7 +29,7 @@ idea of the codebase (see [design-decisions.md](design-decisions.md#two-phase-tr
 ```
                  ┌─────────────────────────────────────────────────────────────┐
                  │  Phase A — preprocess datasets (one-off, separate script)   │
-raw videos/imgs ─┤  decode frames, scale angles to [-1, 1], emit JSON manifest │
+raw videos/imgs ─┤  decode frames, emit JSON manifest (angles in degrees)      │
                  └─────────────────────────────────────────────────────────────┘
                                           │  manifest of {id, image_path, angles}
                                           ▼
@@ -75,12 +75,18 @@ executes until a caller passes a `tf.Session` into `predict()` / `train()`.
 - **`PretrainedBackBoneImageModel`** - loads a frozen `.pb` graph, prepends its own
   JPEG-decode/resize/normalize subgraph, and produces a feature vector per image.
   Branches on `supports_batching` because Inception V3 cannot take batched input.
-- **`EulerAnglesPredictionHead`** - builds **three independent MLP stacks** (one per
-  angle) on top of the feature vector, plus the summed MSE loss, the optimizer
-  step, and the TensorBoard summary ops. This is the trainable part.
+- **`EulerAnglesPredictionHead`** - the default trainable head: builds **three
+  independent MLP stacks** (one per angle) on top of the feature vector, plus the
+  summed MSE loss, the optimizer step, and the TensorBoard summary ops.
+- **`HopeNetPredictionHead`** - an alternative trainable head implementing the
+  [HopeNet](https://arxiv.org/pdf/1710.00925) multi-loss formulation (per-angle bin
+  classification + expected-value regression) instead of plain MSE. Which head the
+  trainer builds is config-driven via `prediction_head_class`.
 - **`EulerAnglesPredictionModel`** - a thin container that wires a backbone and a
-  head together so you can go straight from image bytes to angles at inference
-  time. (Note: it has live bugs - see [components.md](components.md#euleranglespredictionmodel-end_to_end_modelspy).)
+  head together for single-call image-to-angles inference. It works only through its
+  two-step `predict()` (run backbone → feed the feature vectors into the head); the
+  two subgraphs are **not** joined, so it is not a single runnable/exportable graph,
+  and it is not yet wired into the trainer - see [components.md](components.md#euleranglespredictionmodel-end_to_end_modelspy).
 - **`PredictionHeadTrainer`** - the orchestrator. Constructs the backbone and head
   from the config, owns the single `tf.Session`, runs bottleneck generation and the
   train/validate/test loop, and exports the frozen head.
@@ -120,7 +126,7 @@ Entry point: `scripts/python/train_model.py` → builds an `ExperimentConfig` �
 constructs `PredictionHeadTrainer` → calls `.train()`.
 
 ```bash
-python scripts/python/train_model.py -c configs/experiments/test_experiment.yml
+python scripts/python/train_model.py -c configs/experiments/test_experiment.yaml
 ```
 
 `PredictionHeadTrainer.train()` runs these stages inside one `tf.Session`:
@@ -154,13 +160,14 @@ Experiments are **fully config-driven**. `schema.py` defines a tree of dataclass
 that mirror the YAML; `ExperimentConfig.from_yaml` (or `.from_args`) loads them.
 
 
-Reference config: [`configs/experiments/test_experiment.yml`](../configs/experiments/test_experiment.yml).
+Reference config: [`configs/experiments/test_experiment.yaml`](../configs/experiments/test_experiment.yaml).
 
 
 ### String-reference injection
 
-The `optimizer_class`, `learning_rate_decay_function`, and the head's activation
-function are all specified in YAML as **dotted import strings**, e.g.
+The `prediction_head_class`, `optimizer_class`, `learning_rate_decay_function`, the
+head's activation function, and the dataset preprocessor classes are all specified
+in YAML as **dotted import strings**, e.g.
 `tensorflow.compat.v1.train.AdamOptimizer`. `utils/utils.py` resolves these at
 runtime:
 
@@ -175,7 +182,7 @@ This is why you can swap optimizers or activations without touching Python — s
 
 ### The backbone registry
 
-`configs/tf_models/tf_models.yaml` is a generated registry of every supported
+`configs/tf_model_registry/tf_model_registry.yaml` is a generated registry of every supported
 backbone (Inception V3 + the full MobileNet V1 family) with its download URL,
 graph-definition filename, input/output node names, input size, feature-vector
 size, and `supports_batching` flag. Regenerate it with

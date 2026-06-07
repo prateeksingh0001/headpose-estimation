@@ -47,21 +47,29 @@ learn each batch.
   `.values()`, so **dict ordering matters**. In particular `train()` returns losses
   as `total, yaw, roll, pitch` (roll before pitch) — match that ordering when
   unpacking.
+- `HopeNetPredictionHead` keeps the same three-independent-branches structure but
+  swaps the per-angle loss (bin classification + expected-value regression, summed
+  then averaged) — see [components.md](components.md#hopenetpredictionhead--modelsangle_prediction_headspy).
 
 ---
 
-## Normalize angles to [-1, 1] during preprocessing
+## Normalize angles to [-1, 1] inside the head
 
 **Decision.** Scale ground-truth Euler angles from degrees into `[-1, 1]` by
-dividing by `ANGLE_SCALING_FACTOR = 90` in the `EulerAnglePredictionHead`.
+dividing by `EULER_ANGLE_NORMALIZATION_FACTOR = 90` **inside the head's `train`**,
+not during preprocessing. The dataset manifest stores raw degrees.
 
-**Why.** Bounded, small-magnitude targets are friendlier for MSE regression and
-keep the loss on a comparable scale across the three angles. Doing it once during
-preprocessing means the cached manifest already carries normalized targets.
+**Why.** Bounded, small-magnitude targets are friendlier for MSE regression and keep
+the loss on a comparable scale across the three angles. Keeping the manifest in raw
+degrees means the normalization convention lives in exactly one place (the head), so
+every preprocessor stays scaling-agnostic and the same cache can feed a head that
+uses a different convention (e.g. `HopeNetPredictionHead`, which consumes raw degrees
+directly).
 
-**Consequence.** Model outputs are in `[-1, 1]` units; multiply predictions by 180
-to recover degrees. Any new dataset preprocessor must apply the same scaling so
-targets stay consistent.
+**Consequence.** `EulerAnglesPredictionHead.train` divides the incoming ground truth
+by 90; its `predict` multiplies the raw `[-1, 1]` output back by 90 to return
+degrees. Dataset preprocessors must emit **raw degrees** — they must *not*
+pre-normalize.
 
 ---
 
@@ -93,7 +101,7 @@ faster batched. Encoding this as data (a config flag) rather than special-casing
 class logic keeps the model code generic.
 
 **Consequence.** `predict` `vstack`s and runs once for batching backbones, else
-loops per image. When adding a backbone to `tf_models.yaml`, set this flag
+loops per image. When adding a backbone to `tf_model_registry.yaml`, set this flag
 correctly or you'll get shape errors (or leave throughput on the table).
 
 ---
@@ -110,5 +118,7 @@ is the intended V2 and is what `EulerAnglesPredictionModel` is meant to enable.
 
 **Consequence.** Inference today requires loading both the backbone and the saved
 head and chaining them. `EulerAnglesPredictionModel` is the container for that
-chaining but currently has bugs (see
+chaining, but it only works as a **two-step** call (run backbone → feed the feature
+vectors into the head); its two subgraphs are not joined, so it is not yet a single
+fused graph you could export (see
 [components.md](components.md#euleranglespredictionmodel-end_to_end_modelspy)).

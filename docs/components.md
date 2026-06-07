@@ -25,7 +25,7 @@ any gotchas / known bugs.
     `_summary_ops`.
   - `predict(session, prediction_input)` — `vstack`s the inputs, runs the three
     prediction ops, and returns a `List[Dict[str, float]]` of yaw/pitch/roll, each
-    scaled by `self.EULER_ANGLE_NORMALIZATION_FACTOR`.
+    scaled back to degrees by `EULER_ANGLE_NORMALIZATION_FACTOR` (= 90).
   - `save_as_frozen_graph(session, output_graphdef_path)` — folds variables into
     constants (`convert_variables_to_constants`) over the prediction ops and writes
     a frozen `.pb`.
@@ -192,6 +192,22 @@ head → angles).
 
 **Constructor:** `(backbone_image_model, euler_angle_prediction_head)`.
 
+**How it works:** `predict(session, image_bytes)` runs in **two steps** — it calls
+the backbone's `predict` to get NumPy feature vectors, then feeds those into the
+head's `predict`. `input_placeholder` proxies the backbone's image-bytes placeholder
+and `prediction_ops` proxies the head's output tensors.
+
+**Gotchas:**
+
+- The backbone and head subgraphs are **not connected in the TF graph** — the head
+  consumes its own representation placeholder, which is never fed from the backbone's
+  output. So `input_placeholder` + `prediction_ops` do **not** form a runnable single
+  graph (you cannot `session.run(prediction_ops, feed_dict={input_placeholder:
+  bytes})`); only the two-step `predict()` works. A fused, exportable end-to-end graph
+  (V2) would require building the head on top of the backbone's output tensor — see
+  [design-decisions.md](design-decisions.md#export-only-the-head-as-a-frozen-graph-for-now).
+- Not currently instantiated by `PredictionHeadTrainer`.
+
 ---
 
 ## `PredictionHeadTrainer` — `trainer.py`
@@ -203,12 +219,14 @@ export.
 **Constructor:** from an `ExperimentConfig`, it creates the experiment
 directories, the `global_step` variable, the optimizer (via `optimizer_factory`),
 the backbone (`PretrainedBackBoneImageModel`, looked up through
-`TensorflowV1ModelHandler`), and the head (`EulerAnglesPredictionHead`).
+`TensorflowV1ModelHandler`), and the head — whose class is resolved from
+`prediction_model_config.prediction_head_class` via `cls_from_str` (e.g.
+`EulerAnglesPredictionHead` or `HopeNetPredictionHead`).
 
 **Key methods:**
 
-- `_load_dataset()` — loads the manifest. **Truncates to the first 1000 datapoints**
-  (`dataset.datapoints[:1000]`) — a dev convenience; remove/raise for full runs.
+- `_load_dataset()` — loads the manifest into a `Dataset` via
+  `Dataset.load_from_file`.
 - `_create_intermediate_image_representations(session, dataset)` — Phase B. Reads
   images in `batch_size` chunks, runs the backbone, writes each feature vector to
   `<intermediate_representations_save_dir>/<id>.npz` (compressed), and records the
@@ -247,7 +265,8 @@ the backbone (`PretrainedBackBoneImageModel`, looked up through
     the cache paths persist).
 
 **Manifest format** (list of objects): `{id, image_path, yaw_ground_truth,
-pitch_ground_truth, roll_ground_truth}`, angles already scaled to `[-1, 1]`.
+pitch_ground_truth, roll_ground_truth}`, angles in **raw degrees** (normalization to
+`[-1, 1]` happens later, inside the head's `train`).
 
 The config dataclasses (`ExperimentConfig`, `TrainingConfig`, `OptimizerConfig`,
 `PredictionHeadModelConfig`, `PretrainedImageRepresentationModelConfig`) also live
@@ -263,29 +282,40 @@ in `schema.py` — see [architecture.md §4](architecture.md#4-configuration).
   `graph_definition_path`, `download_url`, `input_node_name`, `output_node_name`,
   `output_tensor_size`, `image_input_size`, `image_depth`, `supports_batching`.
 - `TensorflowV1ModelHandler(model_storage_path, tf_models_config_path)` — loads the
-  registry (`configs/tf_models/tf_models.yaml`) into a `{architecture: config}`
-  map and rewrites each `graph_definition_path` to an absolute on-disk path.
+  registry (`configs/tf_model_registry/tf_model_registry.yaml`) into a
+  `{architecture: config}` map and rewrites each `graph_definition_path` to an
+  absolute on-disk path.
   - `get_model_info(architecture)` — returns the config (raises if unknown).
   - `get_model(architecture)` — returns the local model dir, downloading and
     extracting the tarball (with a logged progress bar) on a cache miss.
 
 ---
 
-## `UPNAPreprocessor` — `dataset_preprocessors.py`
+## Dataset preprocessors — `dataset_preprocessors.py`
 
-**Responsibility:** turn a raw dataset into the JSON manifest the trainer consumes.
+**Responsibility:** turn a raw dataset into the per-frame manifest entries the
+trainer consumes. Every preprocessor emits dicts of `{id, image_path,
+yaw_ground_truth, pitch_ground_truth, roll_ground_truth}` with angles in **raw
+degrees** — there is no `[-1, 1]` scaling here (that happens later, inside the
+head's `train`).
 
-Handles the UPNA datasets (real + synthetic), which ship as `.mp4` videos of 300
-frames each plus tab-delimited ground-truth files
-(`user_n_video_k_groundtruth3D.txt`) whose columns are
-`Tx, Ty, Tz, Roll, Yaw, Pitch`. It uses the **non-zeroed** ground truth (absolute
-angles, not relative-to-first-frame).
+- **`BaseDatasetPreprocessor`** — ABC constructed with `(dataset_name,
+  dataset_path, output_path)`; subclasses implement
+  `process_dataset(sample_size=None)`, returning the list of manifest entries.
+- **`UPNAPreprocessor`** — handles the UPNA datasets, which ship as `.mp4` videos of
+  300 frames each plus tab-delimited ground-truth files
+  (`user_n_video_k_groundtruth3D.txt`) whose columns are `Tx, Ty, Tz, Roll, Yaw,
+  Pitch`. It uses the **non-zeroed** ground truth (absolute angles, not
+  relative-to-first-frame), extracts each frame to a JPEG, and records the per-frame
+  angle.
+- **`ThreeHudredWLPPreprocessor`** — handles the 300W-LP dataset (sub-datasets in
+  `SUB_DATASET_NAMES`: AFW, HELEN, IBUG, LFPW and their `_Flip` variants). Each image
+  has a paired `.mat` file; pitch/yaw/roll are read from `Pose_Para[0, :3]` and
+  **converted from radians to degrees**.
 
-`preprocess_dataset()` walks each user's videos, extracts every frame as a JPEG,
-and appends a manifest entry with the angles **divided by `ANGLE_SCALING_FACTOR =
-180`** to scale degrees into `[-1, 1]`. Writes `preprocessed_ground_truth.json`.
-
-**Entry point:** `scripts/python/run_dataset_preprocessing.py -c <config.yml>`. The
-config lists datasets and their preprocessor import strings (resolved via
-`cls_from_str`), so adding a preprocessor is a config edit plus a new class — see
-[`configs/experiments/data_preprocessing_config.yml`](../configs/experiments/data_preprocessing_config.yml).
+**Entry point:** `scripts/python/run_dataset_preprocessing.py -c <config.yaml>`. The
+script instantiates each configured preprocessor (import strings resolved via
+`cls_from_str`), concatenates their `process_dataset(...)` output, and writes the
+combined manifest to `<output_path>/ground_truth.json`. Adding a dataset is a config
+edit plus (if needed) a new preprocessor class — see
+[`configs/experiments/data_preprocessing_config.yaml`](../configs/experiments/data_preprocessing_config.yaml).
