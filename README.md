@@ -35,7 +35,7 @@ Also implements the angle prediction head from the HopeNet architecture([https:/
 
 ## Architecture
 
-<img src="docs/assets/images/model_architecture.jpg"/>
+<img src="docs/assets/images/model_architecture.png"/>
 
 ## Future Extensions
 1. Code:
