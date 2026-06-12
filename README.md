@@ -38,12 +38,10 @@ Also implements the angle prediction head from the HopeNet architecture([https:/
 <img src="docs/assets/images/model_architecture.png"/>
 
 ## Future Extensions
-1. Code:
-    - Modernize the codebase in Pytorch or Tensorflow 2 and newer version of Python.
-2. Modelling
-    - Regularization
-        - Add Dropout layers at the beginning of the model heads.
-        - Apply gradient clipping during weight updates
-        - Calculate the correlation between the weights and the loss as a form of regularization for each angle head
-    - Not every Euler angle has the same range -- for example a person would have a much higher range of motion in yaw than in pitch and roll
-        - In the HopeNet architecture restrict the angles choice buckets specific to the range for each Euler angle.
+- Migrate the codebase to Pytorch or Tensorflow 2 and newer Python version.
+- Regularization
+    - Add Dropout layers at the beginning of the model heads.
+    - Apply gradient clipping during weight updates
+    - Calculate the correlation between the weights and the loss as a form of regularization for each angle head
+- Not every Euler angle has the same range - for example a person would have a much higher range of motion in yaw than in pitch and roll
+    - In the HopeNet architecture restrict the angles choice buckets specific to the range for each Euler angle.
